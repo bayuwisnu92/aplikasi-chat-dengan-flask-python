@@ -17,7 +17,11 @@ def chatrooms():
 
 @main.route('/chat/<int:room_id>', methods=['GET', 'POST'])
 def personal_chat(room_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+
     user_id = session.get('user_id')
+    username = session.get('username')
     chatroom = ChatRoom.query.get_or_404(room_id)
 
     if user_id not in [chatroom.user1_id, chatroom.user2_id]:
@@ -26,7 +30,7 @@ def personal_chat(room_id):
 
     messages = Chat.query.filter_by(room_id=room_id).order_by(Chat.timestamp).all()
 
-    return render_template('chatroom/personal_chat.html', chatroom=chatroom, messages=messages)
+    return render_template('chatroom/personal_chat.html', chatroom=chatroom, messages=messages, username=username)
 
 @socketio.on('send_message')
 def handle_send_message(data):
