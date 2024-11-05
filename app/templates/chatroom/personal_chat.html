@@ -1,0 +1,139 @@
+{% extends 'index.html' %}
+
+{% block title %}Chat with {{ chatroom.user1.username if chatroom.user1_id != session['user_id'] else chatroom.user2.username }}{% endblock %}
+
+{% block content %}
+<div class="container chat-container">
+    <h2 class="chat-header">Chat with {{ chatroom.user1.username if chatroom.user1_id != session['user_id'] else chatroom.user2.username }}</h2>
+    
+    <div class="chat-box" id="chat-box">
+        {% for message in messages %}
+            <div class="message {{ 'sent' if message.user_id == session['user_id'] else 'received' }}">
+                <div class="message-content">
+                    <strong>{{ message.user.username }}</strong>:
+                    <span>{{ message.message }}</span>
+                </div>
+                <small class="message-timestamp">{{ message.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <form id="chat-form">
+        <div class="form-group">
+            <textarea id="message-input" class="form-control" placeholder="Type your message here..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary send-btn">Send</button>
+    </form>
+</div>
+
+<style>
+     .chat-container {
+        max-width: 700px;
+        margin: auto;
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    .chat-header {
+        font-size: 1.5rem;
+        margin-bottom: 20px;
+        text-align: center;
+        color: #007bff;
+    }
+    .chat-box {
+        max-height: 400px;
+        overflow-y: auto;
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: #ffffff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+    .message {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 8px;
+        max-width: 70%;
+    }
+    .message.sent {
+        background-color: #dcf8c6;
+        margin-left: auto;
+        text-align: right;
+    }
+    .message.received {
+        background-color: #f1f0f0;
+    }
+    .message-content {
+        font-size: 1rem;
+    }
+    .message-timestamp {
+        font-size: 0.8rem;
+        color: #888;
+    }
+    .chat-form .form-group {
+        margin-bottom: 10px;
+    }
+    .send-btn {
+        width: 100%;
+        padding: 10px;
+        font-size: 1.1rem;
+    }
+</style>
+
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const socket = io();
+        const roomId = {{ chatroom.id|tojson }};
+        
+        // Bergabung ke room saat halaman dimuat
+        socket.emit('join', { room_id: roomId });
+
+        // Mendengarkan event 'status' dari server
+        socket.on('status', function (data) {
+            const statusDiv = document.createElement('p');
+            statusDiv.textContent = data.msg;
+            document.getElementById('chat-box').appendChild(statusDiv);
+        });
+
+        // Menangani pengiriman form
+        document.getElementById('chat-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const messageInput = document.getElementById('message-input');
+            const message = messageInput.value;
+
+            if (message.trim()) {
+                // Emit event 'send_message' ke server
+                socket.emit('send_message', {
+                    room_id: roomId,
+                    message: message
+                });
+
+                messageInput.value = '';
+            }
+        });
+
+        // Menerima pesan baru dari server
+        socket.on('receive_message', function (data) {
+            const chatBox = document.getElementById('chat-box');
+            const newMessage = document.createElement('div');
+            newMessage.classList.add('message');
+            newMessage.classList.add(data.user_id == {{ session['user_id']|tojson }} ? 'sent' : 'received');
+            newMessage.innerHTML = `
+                <div class="message-content">
+                    <strong>${data.username}</strong>: <span>${data.message}</span>
+                </div>
+                <small class="message-timestamp">${data.timestamp}</small>
+            `;
+            chatBox.appendChild(newMessage);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // Emit event 'leave' saat pengguna meninggalkan halaman
+        window.addEventListener('beforeunload', function () {
+            socket.emit('leave', { room_id: roomId });
+        });
+    });
+</script>
+{% endblock %}

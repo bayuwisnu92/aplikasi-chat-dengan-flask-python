@@ -1,0 +1,74 @@
+{% extends 'index.html' %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">Register</h1>
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <form method="POST">
+                {{ form.hidden_tag() }}
+
+                <!-- Input Username -->
+                <div class="form-group mt-3">
+                    {{ form.username.label(class="form-label") }}
+                    {{ form.username(class="form-control") }}
+                    {% for error in form.username.errors %}
+                        <div class="alert alert-danger mt-1" role="alert">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Input Email -->
+                <div class="form-group mt-3">
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control") }}
+                    {% for error in form.email.errors %}
+                        <div class="alert alert-danger mt-1" role="alert">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Input Password -->
+                <div class="form-group mt-3">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control") }}
+                    {% for error in form.password.errors %}
+                        <div class="alert alert-danger mt-1" role="alert">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Input Confirm Password -->
+                <div class="form-group mt-3">
+                    {{ form.confirm_password.label(class="form-label") }}
+                    {{ form.confirm_password(class="form-control") }}
+                    {% for error in form.confirm_password.errors %}
+                        <div class="alert alert-danger mt-1" role="alert">
+                            {{ error }}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Submit Button -->
+                <div class="form-group mt-4 text-center">
+                    {{ form.submit(class="btn btn-primary btn-block") }}
+                </div>
+            </form>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+</div>
+{% endblock %}
