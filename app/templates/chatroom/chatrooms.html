@@ -1,6 +1,6 @@
 {% extends 'index.html' %}
 
-{% block title %}Chatrooms{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
 {% block content %}
 <style>
@@ -41,6 +41,8 @@
     }
 </style>
 
+
+
 <div class="chat-container">
     <h2>daftar chat {{ username }}</h2>
     <ul>
@@ -49,11 +51,39 @@
         <a href="{{ url_for('main.create_private_chat', username=user.username) }}">
           {{ user.username }} <br>
           {% if user.id in last_messages %}
-            <span class="last-message" style="color:grey">{{ last_messages[user.id].message }}</span>
+            <span class="last-message" data-user-id="{{ user.id }}" style="color:grey">{{ last_messages[user.id].message }}</span>
           {% endif %}
         </a>
       </li>
       {% endfor %}
     </ul>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
+<script>
+    const socket = io();
+
+    // Menghubungkan ke chatroom
+    const roomId = "{{ room_id }}"; // Pastikan variabel ini benar sesuai kebutuhan
+    socket.emit('join', { room_id: roomId });
+
+    // Mendengarkan pesan baru dan menambahkannya ke UI
+    socket.on('receive_message', function(data) {
+        const messageElement = document.createElement('div');
+        messageElement.innerHTML = `<strong>${data.username}:</strong> ${data.message} <em>${data.timestamp}</em>`;
+        document.getElementById('messages').appendChild(messageElement);
+    });
+
+    // Mendengarkan pembaruan pesan terakhir
+    socket.on('update_last_messages', function(data) {
+        // Temukan elemen pesan terakhir berdasarkan user_id
+        const lastMessageElement = document.querySelector(`.last-message[data-user-id="${data.user_id}"]`);
+        const listItemElement = lastMessageElement.closest('li'); // Temukan elemen list item terkait
+        if (lastMessageElement) {
+            lastMessageElement.innerHTML = `<span style='color:red;'><strong>pesan baru:</strong> ${data.message} <em>${data.timestamp}</em></span>`;
+            listItemElement.style.backgroundColor = 'red'; // Ubah latar belakang list item menjadi merah
+        }
+    });
+</script>
+
 {% endblock %}

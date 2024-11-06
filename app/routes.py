@@ -54,8 +54,8 @@ def chatrooms():
             last_messages_dict[chatroom.user1_id] = message
         if chatroom.user2_id != user_id:
             last_messages_dict[chatroom.user2_id] = message
-
-    return render_template('chatroom/chatrooms.html', users=users, username=username, chatrooms=chatrooms, last_messages=last_messages_dict)
+    title = 'chatroom'
+    return render_template('chatroom/chatrooms.html', users=users, username=username, chatrooms=chatrooms, last_messages=last_messages_dict, title=title)
 
 @main.route('/create_private_chat/<username>', methods=['GET', 'POST'])
 def create_private_chat(username):
@@ -94,8 +94,9 @@ def personal_chat(room_id):
         return redirect(url_for('main.chatrooms'))
 
     messages = Chat.query.filter_by(room_id=room_id).order_by(Chat.timestamp).all()
+    title = 'chatroom ' + chatroom.room_name
 
-    return render_template('chatroom/personal_chat.html', chatroom=chatroom, messages=messages, username=username)
+    return render_template('chatroom/personal_chat.html', chatroom=chatroom, messages=messages, username=username, title=title)
 
 @socketio.on('send_message')
 def handle_send_message(data):
@@ -115,6 +116,15 @@ def handle_send_message(data):
         'message': message_content,
         'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
     }, room=room_id)
+
+    # Emit the latest messages to all users in the chatroom
+    emit('update_last_messages', {
+        'room_id': room_id,
+        'user_id': user_id,
+        'username': session.get('username'),
+        'message': message_content,
+        'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+    }, broadcast=True)  # Mengirim ke semua pengguna di chatroom
 
 @socketio.on('join')
 def on_join(data):
