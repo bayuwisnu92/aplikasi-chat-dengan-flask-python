@@ -3,6 +3,10 @@ from app.controllers.auth_controller import index_register, index_login, index_l
 from app.models import User, ChatRoom, Chat
 from app import db, socketio  # Import socketio
 from flask_socketio import emit, join_room, leave_room
+from sqlalchemy.orm import aliased
+from sqlalchemy import func
+
+
 
 main = Blueprint('main', __name__)
 
@@ -13,7 +17,68 @@ def chatrooms():
     user_id = session.get('user_id')
     username = session.get('username')
     users = User.query.filter(User.id != user_id).all()
-    return render_template('chatroom/chatrooms.html', users=users, username=username)
+
+    # Ambil chatroom yang terkait dengan pengguna
+    chatrooms = ChatRoom.query.filter(
+        (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
+    ).all()
+
+    # Ambil pesan terakhir untuk setiap chatroom
+    # Subquery untuk mendapatkan pesan terakhir per chatroom
+    last_message_subquery = db.session.query(
+        Chat.room_id,
+        func.max(Chat.timestamp).label('last_timestamp')
+    ).group_by(Chat.room_id).subquery()
+
+    # Aliases untuk tabel Chat agar lebih mudah diakses
+    last_message_alias = aliased(Chat)
+
+    # Query utama untuk mendapatkan chatroom dan pesan terakhir
+    last_messages = db.session.query(
+        ChatRoom,
+        last_message_alias
+    ).join(
+        last_message_subquery, ChatRoom.id == last_message_subquery.c.room_id
+    ).join(
+        last_message_alias,
+        (last_message_alias.room_id == last_message_subquery.c.room_id) &
+        (last_message_alias.timestamp == last_message_subquery.c.last_timestamp)
+    ).filter(
+        (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
+    ).all()
+    print(last_messages)
+    
+    last_messages_dict = {}
+    for chatroom, message in last_messages:
+        if chatroom.user1_id != user_id:
+            last_messages_dict[chatroom.user1_id] = message
+        if chatroom.user2_id != user_id:
+            last_messages_dict[chatroom.user2_id] = message
+
+    return render_template('chatroom/chatrooms.html', users=users, username=username, chatrooms=chatrooms, last_messages=last_messages_dict)
+
+@main.route('/create_private_chat/<username>', methods=['GET', 'POST'])
+def create_private_chat(username):
+    current_user_id = session.get('user_id')
+    current_user_obj = User.query.get(current_user_id)
+    target_user = User.query.filter_by(username=username).first()
+
+    if not target_user:
+        flash('User not found!', 'danger')
+        return redirect(url_for('main.chatrooms'))
+
+    chatroom = ChatRoom.query.filter(
+        ((ChatRoom.user1_id == current_user_obj.id) & (ChatRoom.user2_id == target_user.id)) |
+        ((ChatRoom.user1_id == target_user.id) & (ChatRoom.user2_id == current_user_obj.id))
+    ).first()
+
+    if not chatroom:
+        room_name = f"{current_user_obj.username}-{target_user.username}"
+        chatroom = ChatRoom(room_name=room_name, user1_id=current_user_obj.id, user2_id=target_user.id)
+        db.session.add(chatroom)
+        db.session.commit()
+
+    return redirect(url_for('main.personal_chat', room_id=chatroom.id))
 
 @main.route('/chat/<int:room_id>', methods=['GET', 'POST'])
 def personal_chat(room_id):
@@ -86,25 +151,4 @@ def login_required(func):
     wrapper.__name__ = func.__name__
     return wrapper
 
-@main.route('/create_private_chat/<username>', methods=['GET', 'POST'])
-def create_private_chat(username):
-    current_user_id = session.get('user_id')
-    current_user_obj = User.query.get(current_user_id)
-    target_user = User.query.filter_by(username=username).first()
 
-    if not target_user:
-        flash('User not found!', 'danger')
-        return redirect(url_for('main.chatrooms'))
-
-    chatroom = ChatRoom.query.filter(
-        ((ChatRoom.user1_id == current_user_obj.id) & (ChatRoom.user2_id == target_user.id)) |
-        ((ChatRoom.user1_id == target_user.id) & (ChatRoom.user2_id == current_user_obj.id))
-    ).first()
-
-    if not chatroom:
-        room_name = f"{current_user_obj.username}-{target_user.username}"
-        chatroom = ChatRoom(room_name=room_name, user1_id=current_user_obj.id, user2_id=target_user.id)
-        db.session.add(chatroom)
-        db.session.commit()
-
-    return redirect(url_for('main.personal_chat', room_id=chatroom.id))
