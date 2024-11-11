@@ -1,10 +1,15 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint, app, current_app, render_template, request, redirect, url_for, flash, session, jsonify
 from app.controllers.auth_controller import index_register, index_login, index_logout
 from app.models import User, ChatRoom, Chat
-from app import db, socketio  # Import socketio
+from app import allowed_file, db, socketio  # Import socketio
 from flask_socketio import emit, join_room, leave_room
 from sqlalchemy.orm import aliased
 from sqlalchemy import func
+from werkzeug.utils import secure_filename  # Tambahkan ini untuk mengamankan nama file
+import os  # Tambahkan ini untuk mengelola path file
+import time  # Tambahkan ini untuk mendapatkan waktu saat ini
+
+
 
 
 
@@ -101,31 +106,52 @@ def personal_chat(room_id):
 @socketio.on('send_message')
 def handle_send_message(data):
     user_id = session.get('user_id')
-    room_id = data['room_id']
-    message_content = data['message']
+    room_id = data.get('room_id')
+    message_content = data.get('message', '').strip()
+    image_filename = None
 
-    # Simpan pesan baru ke database
-    new_message = Chat(user_id=user_id, room_id=room_id, message=message_content)
+    # Cek jika pesan kosong
+    if not message_content and not data.get('image'):
+        print("Pesan kosong, tidak dikirim.")
+        return  # Hentikan proses jika pesan kosong
+
+    # Simpan gambar jika dikirim dalam format base64
+    if data.get('image'):
+        import base64
+        from io import BytesIO
+        from PIL import Image
+        import time
+        import os
+
+        image_data = data['image'].split(',')[1]  # Hilangkan bagian 'data:image/...;base64,'
+        image = Image.open(BytesIO(base64.b64decode(image_data)))
+        image_filename = secure_filename(f"{user_id}_{int(time.time())}.png")
+        image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
+
+        # Simpan gambar di path yang sesuai
+        try:
+            image.save(image_path)
+            print(f"Image saved to {image_path}")
+        except Exception as e:
+            print(f"Error saving image: {e}")
+
+    # Simpan pesan ke database
+    new_message = Chat(user_id=user_id, room_id=room_id, message=message_content, image_filename=image_filename)
     db.session.add(new_message)
     db.session.commit()
 
-    # Kirim pesan ke room tertentu dengan detail lengkap
+    # Emit pesan dengan detail gambar
     emit('receive_message', {
-        'message_id': new_message.id,  # Pastikan ID yang digunakan berasal dari `new_message`
+        'message_id': new_message.id,
         'user_id': user_id,
         'username': session.get('username'),
         'message': message_content,
+        'image_filename': image_filename,
         'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
     }, room=room_id)
 
-    # Emit pesan terbaru hanya ke pengguna di room tertentu (tidak perlu broadcast jika hanya untuk room)
-    emit('update_last_messages', {
-        'room_id': room_id,
-        'user_id': user_id,
-        'username': session.get('username'),
-        'message': message_content,
-        'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
-    }, room=room_id)
+
+
 
 
 @socketio.on('join')
