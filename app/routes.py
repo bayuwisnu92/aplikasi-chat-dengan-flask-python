@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from app.controllers.auth_controller import index_register, index_login, index_logout
 from app.models import User, ChatRoom, Chat
 from app import db, socketio  # Import socketio
@@ -16,7 +16,7 @@ def chatrooms():
         return redirect(url_for('main.login'))
     user_id = session.get('user_id')
     username = session.get('username')
-    users = User.query.filter(User.id != user_id).all()
+    users = User.query.filter(User.id != user_id).order_by(User.created_at.desc()).all()
 
     # Ambil chatroom yang terkait dengan pengguna
     chatrooms = ChatRoom.query.filter(
@@ -45,11 +45,11 @@ def chatrooms():
         (last_message_alias.timestamp == last_message_subquery.c.last_timestamp)
     ).filter(
         (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
-    ).all()
+    ).order_by(last_message_alias.timestamp.desc()).all()  # Mengurutkan berdasarkan timestamp terbaru
     print(last_messages)
     
     last_messages_dict = {}
-    for chatroom, message in last_messages:
+    for chatroom, message in sorted(last_messages, key=lambda x: x[1].timestamp, reverse=True):  # Mengurutkan berdasarkan timestamp terbaru
         if chatroom.user1_id != user_id:
             last_messages_dict[chatroom.user1_id] = message
         if chatroom.user2_id != user_id:
@@ -104,27 +104,29 @@ def handle_send_message(data):
     room_id = data['room_id']
     message_content = data['message']
 
-    # Save the message to the database
+    # Simpan pesan baru ke database
     new_message = Chat(user_id=user_id, room_id=room_id, message=message_content)
     db.session.add(new_message)
     db.session.commit()
 
-    # Broadcast the message to the room
+    # Kirim pesan ke room tertentu dengan detail lengkap
     emit('receive_message', {
+        'message_id': new_message.id,  # Pastikan ID yang digunakan berasal dari `new_message`
         'user_id': user_id,
         'username': session.get('username'),
         'message': message_content,
         'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
     }, room=room_id)
 
-    # Emit the latest messages to all users in the chatroom
+    # Emit pesan terbaru hanya ke pengguna di room tertentu (tidak perlu broadcast jika hanya untuk room)
     emit('update_last_messages', {
         'room_id': room_id,
         'user_id': user_id,
         'username': session.get('username'),
         'message': message_content,
         'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
-    }, broadcast=True)  # Mengirim ke semua pengguna di chatroom
+    }, room=room_id)
+
 
 @socketio.on('join')
 def on_join(data):
@@ -160,5 +162,65 @@ def login_required(func):
         return func(*args, **kwargs)
     wrapper.__name__ = func.__name__
     return wrapper
+
+# routes.py
+@main.route('/edit_message/<int:message_id>', methods=['GET', 'POST'])
+def edit_message(message_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    
+    user_id = session.get('user_id')
+    new_content = request.form.get('message_content')
+    
+    # Dapatkan pesan yang ingin diedit
+    message = Chat.query.get_or_404(message_id)
+
+    # Pastikan hanya pemilik pesan yang bisa mengeditnya
+    if message.user_id != user_id:
+        flash("You don't have permission to edit this message.", "danger")
+        return redirect(url_for('main.personal_chat', room_id=message.room_id))
+
+    # Update isi pesan dan simpan ke database
+    message.message = new_content
+    db.session.commit()
+
+    # Kirim pembaruan pesan ke pengguna lain di room yang sama tanpa 'broadcast'
+    socketio.emit('edit_message', {
+        'message_id': message_id,
+        'new_content': new_content,
+        'timestamp': message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+    }, room=message.room_id)
+
+    flash("Message updated successfully!", "success")
+    return redirect(url_for('main.personal_chat', room_id=message.room_id))
+
+
+
+@main.route('/delete_message/<int:message_id>', methods=['POST'])
+def delete_message(message_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    
+    user_id = session.get('user_id')
+    message = Chat.query.get_or_404(message_id)
+
+    # Pastikan hanya pemilik pesan yang bisa menghapusnya
+    if message.user_id != user_id:
+        flash("You don't have permission to delete this message.", "danger")
+        return redirect(url_for('main.personal_chat', room_id=message.room_id))
+
+    room_id = message.room_id
+    
+    # Hapus pesan dari database
+    db.session.delete(message)
+    db.session.commit()
+
+    # Emit event untuk menghapus pesan pada UI pengguna lain tanpa 'broadcast'
+    socketio.emit('delete_message', {
+        'message_id': message_id
+    }, room=room_id)
+
+    flash("Message deleted successfully!", "success")
+    return redirect(url_for('main.personal_chat', room_id=room_id))
 
 

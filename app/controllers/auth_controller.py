@@ -17,7 +17,8 @@ def index_register():
         db.session.commit()
         flash('Akun Anda telah dibuat! Silakan login.', 'success')
         return redirect(url_for('main.login'))
-    return render_template('auth/register.html',form=form)
+    title = 'Register'
+    return render_template('auth/register.html',form=form, title=title)
 
 
 def index_login():
@@ -35,7 +36,9 @@ def index_login():
             return redirect(url_for('main.chatrooms'))
         else:
             flash('Login gagal. Cek email dan password.', 'danger')
-    return render_template('auth/login.html', form=form) 
+        
+    title = 'Login'
+    return render_template('auth/login.html', form=form, title=title) 
 
 def index_logout():
     session.clear()  # Menghapus semua data sesi

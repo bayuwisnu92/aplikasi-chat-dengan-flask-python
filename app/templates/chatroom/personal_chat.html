@@ -1,28 +1,44 @@
 {% extends 'index.html' %}
 
-{% block title %}Chat with {{ chatroom.user1.username if chatroom.user1_id != session['user_id'] else chatroom.user2.username }}{% endblock %}
+{% block title %}room chat {{ title }}{% endblock %}
 
 {% block content %}
 <div class="container chat-container">
     <h2 class="chat-header">Chat with {{ chatroom.user1.username if chatroom.user1_id != session['user_id'] else chatroom.user2.username }}</h2>
     
+    
+
     <div class="chat-box" id="chat-box">
         {% for message in messages %}
-            <div class="message {{ 'sent' if message.user_id == session['user_id'] else 'received' }}">
+            <div class="message {{ 'sent' if message.user_id == session['user_id'] else 'received' }}" id="message-{{ message.id }}">
                 <div class="message-content">
                     <strong>{{ message.user.username }}</strong>:
-                    <span>{{ message.message }}</span>
+                    <span class="message-text">{{ message.message | safe }}</span>
                 </div>
                 <small class="message-timestamp">{{ message.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                {% if message.user_id == session['user_id'] %}
+                    <button class="btn badge btn-sm text-dark" onclick="editMessage({{ message.id }})"><i class="bi bi-pencil-square"></i></button>
+                    <button class="btn badge btn-sm text-danger" onclick="deleteMessage({{ message.id }})"><i class="bi bi-trash3"></i></button>
+                {% endif %}
+                {% with messages=get_flashed_messages() %}
+    {% if messages %}
+        <ul class="flashes">
+        {% for message in messages %}
+            <li>{{ message }}</li>
+        {% endfor %}
+        </ul>
+    {% endif %}
+    {% endwith %}
             </div>
         {% endfor %}
     </div>
     
-    <form id="chat-form">
-        <div class="form-group">
-            <textarea id="message-input" class="form-control" placeholder="Type your message here..." required></textarea>
+    
+    <form id="chat-form" class="mb-3">
+        <div class="input-group">
+            <textarea id="message-input" class="form-control" name="content" placeholder="Ketik pesan Anda di sini..." rows="2"></textarea>
+            <button type="submit" class="btn btn-primary send-btn">KIRIM <i class="bi bi-send"></i></button>
         </div>
-        <button type="submit" class="btn btn-primary send-btn">Send</button>
     </form>
 </div>
 
@@ -42,7 +58,8 @@
         color: #007bff;
     }
     .chat-box {
-        max-height: 400px;
+        max-height: 420px;
+        min-height: 400px;
         overflow-y: auto;
         margin-bottom: 20px;
         padding: 10px;
@@ -74,66 +91,143 @@
     .chat-form .form-group {
         margin-bottom: 10px;
     }
-    .send-btn {
+    .send-btn { 
         width: 100%;
         padding: 10px;
         font-size: 1.1rem;
+        margin-top: 7px;
     }
 </style>
 
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const socket = io();
-        const roomId = {{ chatroom.id|tojson }};
-        
-        // Bergabung ke room saat halaman dimuat
-        socket.emit('join', { room_id: roomId });
+    const socket = io();
+    const roomId = {{ chatroom.id|tojson }};
+    
+    // Bergabung ke room saat halaman dimuat
+    socket.emit('join', { room_id: roomId });
 
-        // Mendengarkan event 'status' dari server
-        socket.on('status', function (data) {
-            const statusDiv = document.createElement('p');
-            statusDiv.textContent = data.msg;
-            document.getElementById('chat-box').appendChild(statusDiv);
-        });
+    // Mendengarkan event 'status' dari server
+    socket.on('status', function (data) {
+        const statusDiv = document.createElement('p');
+        statusDiv.textContent = data.msg;
+        document.getElementById('chat-box').appendChild(statusDiv);
+    });
 
-        // Menangani pengiriman form
-        document.getElementById('chat-form').addEventListener('submit', function (e) {
-            e.preventDefault();
-            const messageInput = document.getElementById('message-input');
-            const message = messageInput.value;
+    // Mendengarkan event 'edit_message' dari server
+    socket.on('edit_message', function(data) {
+        const messageElement = document.getElementById(`message-${data.message_id}`);
+        if (messageElement) {
+            messageElement.querySelector('.message-text').innerText = data.new_content;
+            messageElement.querySelector('.message-timestamp').innerText = data.timestamp;
+        }
+    });
 
-            if (message.trim()) {
-                // Emit event 'send_message' ke server
-                socket.emit('send_message', {
-                    room_id: roomId,
-                    message: message
-                });
+    // Mendengarkan event 'delete_message' dari server
+    socket.on('delete_message', function(data) {
+        const messageElement = document.getElementById(`message-${data.message_id}`);
+        if (messageElement) {
+            messageElement.remove();  // Menghapus pesan dari DOM
+        }
+    });
 
-                messageInput.value = '';
+    // Menangani pengiriman form untuk pesan baru
+    document.getElementById('chat-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const messageInput = document.getElementById('message-input');
+        const message = messageInput.value;
+
+        if (message.trim()) {
+            // Emit event 'send_message' ke server
+            socket.emit('send_message', {
+                room_id: roomId,
+                message: message
+            });
+
+            messageInput.value = '';
+        }
+    });
+
+    // Mendengarkan event 'receive_message' dari server untuk pesan baru
+    socket.on('receive_message', function (data) {
+    const chatBox = document.getElementById('chat-box');
+    const newMessage = document.createElement('div');
+    newMessage.id = `message-${data.message_id}`;
+    newMessage.classList.add('message', data.user_id === {{ session['user_id']|tojson }} ? 'sent' : 'received');
+
+    // Tambahkan HTML sesuai dengan struktur Jinja Template
+    newMessage.innerHTML = `
+        <div class="message-content">
+            <strong>${data.username}</strong>: <span class="message-text">${data.message}</span>
+        </div>
+        <small class="message-timestamp">${data.timestamp}</small>
+        ${data.user_id === {{ session['user_id']|tojson }} ? `
+            <button class="btn badge btn-sm text-dark" onclick="editMessage(${data.message_id})">
+                <i class="bi bi-pencil-square"></i>
+            </button>
+            <button class="btn badge btn-sm text-danger" onclick="deleteMessage(${data.message_id})">
+                <i class="bi bi-trash3"></i>
+            </button>
+        ` : ''}
+    `;
+    chatBox.appendChild(newMessage);
+    chatBox.scrollTop = chatBox.scrollHeight;
+});
+
+
+
+    // Scroll ke bawah saat halaman dimuat
+    const chatBox = document.getElementById('chat-box');
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Emit event 'leave' saat pengguna meninggalkan halaman
+    window.addEventListener('beforeunload', function () {
+        socket.emit('leave', { room_id: roomId });
+    });
+
+    // Menangani penekanan tombol Enter di textarea
+    document.getElementById('message-input').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey) { // Jika Enter ditekan tanpa Shift
+            e.preventDefault(); // Mencegah baris baru
+            document.getElementById('chat-form').dispatchEvent(new Event('submit')); // Mengirim form
+        }
+    });
+});
+
+// Menangani edit pesan
+function editMessage(messageId) {
+    const messageElement = document.getElementById(`message-${messageId}`);
+    if (messageElement) {
+        const newContent = prompt("Edit your message:", messageElement.querySelector('.message-text').innerText);
+        if (newContent) {
+            fetch(`/edit_message/${messageId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: `message_content=${encodeURIComponent(newContent)}`
+            }).then(response => {
+                if (response.ok) {
+                    console.log("Message updated successfully");
+                }
+            });
+        }
+    }
+}
+
+// Menangani delete pesan
+function deleteMessage(messageId) {
+    if (confirm("Are you sure you want to delete this message?")) {
+        fetch(`/delete_message/${messageId}`, {
+            method: 'POST'
+        }).then(response => {
+            if (response.ok) {
+                console.log("Message deleted successfully");
             }
         });
+    }
+}
 
-        // Menerima pesan baru dari server
-        socket.on('receive_message', function (data) {
-            const chatBox = document.getElementById('chat-box');
-            const newMessage = document.createElement('div');
-            newMessage.classList.add('message');
-            newMessage.classList.add(data.user_id == {{ session['user_id']|tojson }} ? 'sent' : 'received');
-            newMessage.innerHTML = `
-                <div class="message-content">
-                    <strong>${data.username}</strong>: <span>${data.message}</span>
-                </div>
-                <small class="message-timestamp">${data.timestamp}</small>
-            `;
-            chatBox.appendChild(newMessage);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        });
-
-        // Emit event 'leave' saat pengguna meninggalkan halaman
-        window.addEventListener('beforeunload', function () {
-            socket.emit('leave', { room_id: roomId });
-        });
-    });
 </script>
 {% endblock %}
