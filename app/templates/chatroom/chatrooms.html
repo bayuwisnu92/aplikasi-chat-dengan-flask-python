@@ -39,21 +39,40 @@
         background-color: #c8e0d4; /* Warna latar belakang saat hover */
         transform: translateY(-2px); /* Efek angkat sedikit saat hover */
     }
+    .chat-link {
+        display: flex; /* Menggunakan flexbox untuk tata letak yang lebih baik */
+        align-items: center; /* Menengahkan item dalam flexbox */
+    }
 </style>
 
 
 
 <div class="chat-container">
-    <h2>daftar chat {{ username }}</h2>
+    <h2>Daftar chat {{ username }}
+        {% if profile.gambar_filename %}
+            <div class="profile">
+                <img src="{{ url_for('static', filename='uploads/' + profile.gambar_filename) }}" alt="{{ profile.username }}'s Profile Picture" style="width: 50px;height: auto;" />
+            </div>
+        {% else %}
+            <p>User profile not found.</p>
+        {% endif %}
+    </h2>
+    
     <ul>
       {% for user in users|sort(attribute='last_message_timestamp', reverse=true) %}
       <li>
-        <a href="{{ url_for('main.create_private_chat', username=user.username) }}">
-          {{ user.username }} <br>
+        <a href="{{ url_for('main.create_private_chat', username=user.username) }}" class="chat-link">
+            {% if user.gambar_filename %}
+    <img src="{{ url_for('static', filename='uploads/' ~ user.gambar_filename) }}" alt="Profile Picture" class="profile-img rounded-circle" style="width: 40px; height: auto;">
+{% else %}
+    <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" alt="Default Profile Picture" class="profile-img rounded-circle" style="width: 40px; height: auto;">
+{% endif %}
+
+         {{ user.username }} <br>
           {% if user.id in last_messages %}
-            <span class="last-message" data-user-id="{{ user.id }}" style="color:grey">{{ last_messages[user.id].message | safe }}</span>
+            <span class="last-message" data-user-id="{{ user.id }}" style="color:black;margin-left: 50px;">{{ last_messages[user.id].message | safe | truncate(52) }}</span>
           {% else %}
-            <span class="last-message" data-user-id="{{ user.id }}">Tidak ada pesan terakhir</span>
+            <span class="last-message" data-user-id="{{ user.id }}" style="margin-left: 50px;color: grey;">Tidak ada pesan terakhir</span>
           {% endif %}
         </a>
         

@@ -1,5 +1,5 @@
 from flask import Blueprint, app, current_app, render_template, request, redirect, url_for, flash, session, jsonify
-from app.controllers.auth_controller import index_register, index_login, index_logout
+from app.controllers.auth_controller import edit_user, index_register, index_login, index_logout
 from app.models import User, ChatRoom, Chat
 from app import allowed_file, db, socketio  # Import socketio
 from flask_socketio import emit, join_room, leave_room
@@ -22,7 +22,8 @@ def chatrooms():
     user_id = session.get('user_id')
     username = session.get('username')
     users = User.query.filter(User.id != user_id).order_by(User.created_at.desc()).all()
-
+    profile = User.query.filter_by(id=user_id).first()
+    print(profile)
     # Ambil chatroom yang terkait dengan pengguna
     chatrooms = ChatRoom.query.filter(
         (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
@@ -51,7 +52,7 @@ def chatrooms():
     ).filter(
         (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
     ).order_by(last_message_alias.timestamp.desc()).all()  # Mengurutkan berdasarkan timestamp terbaru
-    print(last_messages)
+    
     
     last_messages_dict = {}
     for chatroom, message in sorted(last_messages, key=lambda x: x[1].timestamp, reverse=True):  # Mengurutkan berdasarkan timestamp terbaru
@@ -60,7 +61,7 @@ def chatrooms():
         if chatroom.user2_id != user_id:
             last_messages_dict[chatroom.user2_id] = message
     title = 'chatroom'
-    return render_template('chatroom/chatrooms.html', users=users, username=username, chatrooms=chatrooms, last_messages=last_messages_dict, title=title)
+    return render_template('chatroom/chatrooms.html', users=users, username=username, chatrooms=chatrooms, last_messages=last_messages_dict, title=title, profile=profile)
 
 @main.route('/create_private_chat/<username>', methods=['GET', 'POST'])
 def create_private_chat(username):
@@ -250,3 +251,10 @@ def delete_message(message_id):
     return redirect(url_for('main.personal_chat', room_id=room_id))
 
 
+@main.route('/update_profile_picture', methods=['POST'])
+def update_profile_picture():
+    return edit_user()
+
+@main.route('/edit_profile', methods=['GET', 'POST'])
+def edit_profile():
+    return render_template('auth/update.html')

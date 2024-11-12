@@ -1,10 +1,9 @@
-
-from flask import render_template
+import os
+from flask import render_template, request, redirect, url_for, flash, session, current_app
+from werkzeug.utils import secure_filename
 from app.forms import RegistrationForm, LoginForm
 from app.models.user import User
 from app import db, bcrypt
-from flask import session, redirect, url_for, flash
-
 def index_register():
     if 'user_id' in session:
         flash('Anda sudah login!', 'info')
@@ -44,3 +43,44 @@ def index_logout():
     session.clear()  # Menghapus semua data sesi
     flash('Anda telah berhasil logout.', 'info')
     return redirect(url_for('main.login'))
+
+def edit_user():
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Anda harus login terlebih dahulu')
+        return redirect(url_for('main.login'))
+
+    user = User.query.get(user_id)
+    if not user:
+        flash('User tidak ditemukan')
+        return redirect(url_for('main.login'))
+
+    if 'profile_picture' not in request.files:
+        flash('Tidak ada file yang dipilih')
+        return redirect(request.url)
+
+    file = request.files['profile_picture']
+    if file.filename == '':
+        flash('Nama file kosong')
+        return redirect(request.url)
+
+    if file:
+        filename = secure_filename(file.filename)
+        profile_folder = os.path.join(current_app.config['UPLOAD_FOLDER'], 'profile_pics')
+        
+        # Buat folder profile_pics jika belum ada
+        if not os.path.exists(profile_folder):
+            os.makedirs(profile_folder)
+        
+        filepath = os.path.join(profile_folder, filename)
+        file.save(filepath)
+
+        # Perbarui kolom gambar_filename pada user yang sedang login
+        user.gambar_filename = f"profile_pics/{filename}"  # Simpan path relatif untuk akses yang mudah
+        db.session.commit()
+        flash('Foto profil berhasil diperbarui')
+        return redirect(url_for('main.chatrooms'))  # Sesuaikan route 'profile' untuk halaman profil
+
+    flash('Gagal mengunggah file')
+    return redirect(request.url)
+
