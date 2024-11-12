@@ -238,6 +238,15 @@ def delete_message(message_id):
 
     room_id = message.room_id
     
+    # Hapus file gambar jika ada
+    if message.image_filename:
+        image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], message.image_filename)
+        try:
+            os.remove(image_path)  # Menghapus file gambar dari server
+            print(f"Image {image_path} deleted successfully.")
+        except Exception as e:
+            print(f"Error deleting image: {e}")
+
     # Hapus pesan dari database
     db.session.delete(message)
     db.session.commit()

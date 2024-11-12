@@ -48,13 +48,13 @@
 
 
 <div class="chat-container">
-    <h2>Daftar chat {{ username }}
+    <h2>{{ username }}
         {% if profile.gambar_filename %}
             <div class="profile">
                 <img src="{{ url_for('static', filename='uploads/' + profile.gambar_filename) }}" alt="{{ profile.username }}'s Profile Picture" style="width: 50px;height: auto;" />
             </div>
         {% else %}
-            <p>User profile not found.</p>
+        <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" alt="Default Profile Picture" class="profile-img rounded-circle" style="width: 40px; height: auto;">
         {% endif %}
     </h2>
     
