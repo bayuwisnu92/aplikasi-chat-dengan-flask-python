@@ -1,0 +1,51 @@
+{% extends 'index.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<style>
+    .profile-container {
+    font-family: Arial, sans-serif;
+    color: #333;
+}
+
+.profile-container h2, .profile-container h4 {
+    color: #4267B2;
+}
+
+</style>
+<div class="profile-container" style="max-width: 900px; margin: 0 auto; border: 1px solid #ddd; background-color: #fff; border-radius: 8px; padding: 20px;">
+    <div class="profile-header" style="text-align: center; padding: 20px; border-bottom: 1px solid #ddd;">
+        <!-- Foto Profil Besar -->
+        <div class="profile-pic" style="margin-bottom: 20px;">
+            {% if users.gambar_filename %}
+                <img src="{{ url_for('static', filename='uploads/' + users.gambar_filename) }}" alt="Profile Picture" style="width: 150px; height: 150px; border-radius: 50%; border: 3px solid #4267B2;">
+            {% else %}
+                <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" alt="Profile Picture" style="width: 150px; height: 150px; border-radius: 50%; border: 3px solid #4267B2;">
+            {% endif %}
+        </div>
+        <!-- Tombol Edit Profil -->
+        <a href="{{ url_for('main.edit_profile') }}" style="display: inline-block; padding: 8px 16px; background-color: #4267B2; color: white; border-radius: 4px; text-decoration: none;">Edit Profile Picture</a>
+    </div>
+
+    <div class="profile-info" style="padding: 20px; text-align: center;">
+        <h2 style="margin: 10px 0; font-weight: bold; color: #333;">{{ users.username }}</h2>
+        <p style="color: #777;">{{ users.email }}</p>
+    </div>
+
+    <!-- Informasi Tambahan -->
+    <div class="additional-info" style="display: flex; justify-content: space-around; padding: 20px;">
+        <div class="info-item" style="text-align: center;">
+            <h4 style="margin: 0; color: #333;">Friends</h4>
+            <p style="color: #777;">{{ users.friends_count }}</p> <!-- Ganti dengan data sebenarnya -->
+        </div>
+        <div class="info-item" style="text-align: center;">
+            <h4 style="margin: 0; color: #333;">Posts</h4>
+            <p style="color: #777;">50</p> <!-- Ganti dengan data sebenarnya -->
+        </div>
+        <div class="info-item" style="text-align: center;">
+            <h4 style="margin: 0; color: #333;">Photos</h4>
+            <p style="color: #777;">25</p> <!-- Ganti dengan data sebenarnya -->
+        </div>
+    </div>
+</div>
+
+{% endblock %}

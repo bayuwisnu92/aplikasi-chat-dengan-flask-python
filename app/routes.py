@@ -266,4 +266,18 @@ def update_profile_picture():
 
 @main.route('/edit_profile', methods=['GET', 'POST'])
 def edit_profile():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    
+
     return render_template('auth/update.html')
+
+@main.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    user_id = session.get('user_id')
+    username= session.get('username')
+    title = 'profil'
+    users=User.query.get(user_id)
+    return render_template('profile.html',title=title,users=users,username=username)
