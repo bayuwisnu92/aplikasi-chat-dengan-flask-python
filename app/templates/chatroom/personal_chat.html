@@ -4,7 +4,15 @@
 
 {% block content %}
 <div class="container chat-container">
-    <h2 class="chat-header">Chat with {{ chatroom.user1.username if chatroom.user1_id != session['user_id'] else chatroom.user2.username }}</h2>
+    <h2 class="chat-header">{% if chatroom.user1_id != session['user_id'] and chatroom.user1.gambar_filename %} 
+        <img src="{{ url_for('static', filename='uploads/' + chatroom.user1.gambar_filename) }}" alt="" style="width: 50px; height: auto;">
+    {% elif chatroom.user2.gambar_filename %}
+        <img src="{{ url_for('static', filename='uploads/' + chatroom.user2.gambar_filename) }}" alt="" style="width: 50px; height: auto;">
+    {% else %}
+        <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" alt="Default Profile Picture" class="profile-img rounded-circle" style="width: 40px; height: auto;">
+    {% endif %}
+        
+        {{ chatroom.user1.username if chatroom.user1_id != session['user_id'] else chatroom.user2.username }}</h2>
     
     
 
