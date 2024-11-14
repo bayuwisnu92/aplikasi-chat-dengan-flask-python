@@ -98,14 +98,26 @@
 
     // Mendengarkan pembaruan pesan terakhir
     socket.on('update_last_messages', function(data) {
-        // Temukan elemen pesan terakhir berdasarkan user_id
-        const lastMessageElement = document.querySelector(`.last-message[data-user-id="${data.user_id}"]`);
+    console.log("Updating last message:", data); // Debugging log
+
+    // Temukan elemen pesan terakhir berdasarkan user_id
+    const lastMessageElement = document.querySelector(`.last-message[data-user-id="${data.user_id}"]`);
+    if (lastMessageElement) {
         const listItemElement = lastMessageElement.closest('li'); // Temukan elemen list item terkait
-        if (lastMessageElement) {
-            lastMessageElement.innerHTML = `<span style='color:red;'><strong>pesan baru:</strong> ${data.message} <em>${data.timestamp}</em></span>`;
-            listItemElement.style.backgroundColor = 'red'; // Ubah latar belakang list item menjadi merah
-        }
-    });
+        
+        // Perbarui konten pesan terakhir
+        lastMessageElement.innerHTML = `<span style='color:red;'><strong>pesan baru:</strong> ${data.message} <em>${data.timestamp}</em></span>`;
+        
+        // Ubah latar belakang list item menjadi merah
+        listItemElement.style.backgroundColor = 'red';
+
+        // Pindahkan list item ke bagian atas daftar
+        const chatList = listItemElement.parentNode;
+        chatList.prepend(listItemElement); // Memindahkan elemen ke posisi pertama dalam daftar
+    } else {
+        console.log("Element for user_id not found:", data.user_id);  // Log jika elemen tidak ditemukan
+    }
+});
 </script>
 
 {% endblock %}

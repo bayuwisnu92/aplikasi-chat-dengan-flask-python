@@ -1,3 +1,4 @@
+import datetime
 from flask import Blueprint, app, current_app, render_template, request, redirect, url_for, flash, session, jsonify
 from app.controllers.auth_controller import edit_user, index_register, index_login, index_logout
 from app.models import User, ChatRoom, Chat
@@ -15,28 +16,68 @@ import time  # Tambahkan ini untuk mendapatkan waktu saat ini
 
 main = Blueprint('main', __name__)
 
+# Route untuk autentikasi
+@main.route('/login', methods=['GET', 'POST'])
+def login():
+    return index_login()
+
+@main.route('/register', methods=['GET', 'POST'])
+def register():
+    return index_register()
+
+@main.route('/logout')
+def logout():
+    return index_logout()
+
+# Route untuk profil
+@main.route('/profile')
+def profile():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    user_id = session.get('user_id')
+    username= session.get('username')
+    title = 'profil'
+    users=User.query.get(user_id)
+    return render_template('profile.html',title=title,users=users,username=username)
+
+@main.route('/edit_profile', methods=['GET', 'POST'])
+def edit_profile():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    
+    return render_template('auth/update.html')
+
+@main.route('/update_profile_picture', methods=['POST'])
+def update_profile_picture():
+    return edit_user()
+
+# Route untuk chatroom
 @main.route('/', methods=['GET'])
 def chatrooms():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
+    
     user_id = session.get('user_id')
     username = session.get('username')
-    users = User.query.filter(User.id != user_id).order_by(User.created_at.desc()).all()
+    
+    # Ambil informasi profil pengguna saat ini
     profile = User.query.filter_by(id=user_id).first()
-    print(profile)
+    
+    # Ambil semua pengguna kecuali pengguna saat ini
+    users = User.query.filter(User.id != user_id).all()
+
     # Ambil chatroom yang terkait dengan pengguna
     chatrooms = ChatRoom.query.filter(
         (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
     ).all()
 
-    # Ambil pesan terakhir untuk setiap chatroom
-    # Subquery untuk mendapatkan pesan terakhir per chatroom
+    # Subquery untuk mendapatkan pesan terakhir di setiap chatroom
     last_message_subquery = db.session.query(
         Chat.room_id,
         func.max(Chat.timestamp).label('last_timestamp')
     ).group_by(Chat.room_id).subquery()
 
-    # Aliases untuk tabel Chat agar lebih mudah diakses
+    # Alias untuk tabel Chat agar lebih mudah diakses
     last_message_alias = aliased(Chat)
 
     # Query utama untuk mendapatkan chatroom dan pesan terakhir
@@ -52,38 +93,64 @@ def chatrooms():
     ).filter(
         (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
     ).order_by(last_message_alias.timestamp.desc()).all()  # Mengurutkan berdasarkan timestamp terbaru
-    
-    
+
+    # Membuat dictionary pesan terakhir untuk setiap pengguna
     last_messages_dict = {}
-    for chatroom, message in sorted(last_messages, key=lambda x: x[1].timestamp, reverse=True):  # Mengurutkan berdasarkan timestamp terbaru
+    for chatroom, message in last_messages:
         if chatroom.user1_id != user_id:
             last_messages_dict[chatroom.user1_id] = message
         if chatroom.user2_id != user_id:
             last_messages_dict[chatroom.user2_id] = message
+
+    # Urutkan `users` berdasarkan timestamp pesan terakhir mereka (jika ada), default ke datetime.datetime.min jika None
+    users = sorted(
+        users, 
+        key=lambda u: last_messages_dict.get(u.id, Chat()).timestamp or datetime.datetime.min, 
+        reverse=True
+    )
+
     title = 'chatroom'
-    return render_template('chatroom/chatrooms.html', users=users, username=username, chatrooms=chatrooms, last_messages=last_messages_dict, title=title, profile=profile)
+    return render_template(
+        'chatroom/chatrooms.html', 
+        users=users, 
+        username=username, 
+        chatrooms=chatrooms, 
+        last_messages=last_messages_dict, 
+        title=title, 
+        profile=profile
+    )
 
 @main.route('/create_private_chat/<username>', methods=['GET', 'POST'])
 def create_private_chat(username):
+    # Mendapatkan ID pengguna saat ini dari sesi
     current_user_id = session.get('user_id')
+    # Mengambil objek pengguna saat ini dari database
     current_user_obj = User.query.get(current_user_id)
+    # Mencari pengguna target berdasarkan username yang diberikan
     target_user = User.query.filter_by(username=username).first()
 
+    # Jika pengguna target tidak ditemukan, tampilkan pesan kesalahan dan redirect ke chatrooms
     if not target_user:
         flash('User not found!', 'danger')
         return redirect(url_for('main.chatrooms'))
 
+    # Mencari chatroom yang sudah ada antara pengguna saat ini dan pengguna target
     chatroom = ChatRoom.query.filter(
         ((ChatRoom.user1_id == current_user_obj.id) & (ChatRoom.user2_id == target_user.id)) |
         ((ChatRoom.user1_id == target_user.id) & (ChatRoom.user2_id == current_user_obj.id))
     ).first()
 
+    # Jika chatroom belum ada, buat chatroom baru
     if not chatroom:
+        # Membuat nama chatroom berdasarkan username kedua pengguna
         room_name = f"{current_user_obj.username}-{target_user.username}"
+        # Membuat objek ChatRoom baru
         chatroom = ChatRoom(room_name=room_name, user1_id=current_user_obj.id, user2_id=target_user.id)
+        # Menambahkan chatroom baru ke database
         db.session.add(chatroom)
         db.session.commit()
 
+    # Redirect ke halaman chat pribadi dengan ID chatroom yang baru dibuat atau yang sudah ada
     return redirect(url_for('main.personal_chat', room_id=chatroom.id))
 
 @main.route('/chat/<int:room_id>', methods=['GET', 'POST'])
@@ -141,7 +208,7 @@ def handle_send_message(data):
     db.session.add(new_message)
     db.session.commit()
 
-    # Emit pesan dengan detail gambar
+    # Emit pesan ke klien di room untuk menampilkan pesan baru
     emit('receive_message', {
         'message_id': new_message.id,
         'user_id': user_id,
@@ -150,6 +217,14 @@ def handle_send_message(data):
         'image_filename': image_filename,
         'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
     }, room=room_id)
+
+    # Emit event `update_last_messages` ke semua klien untuk memperbarui pesan terakhir
+    emit('update_last_messages', {
+        'user_id': user_id,
+        'message': message_content,
+        'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+    }, broadcast=True)
+
 
 
 
@@ -167,30 +242,7 @@ def on_leave(data):
     leave_room(room)
     emit('status', {'msg': f"{session.get('username')} has left the room."}, room=room)
 
-# Route lainnya...
-
-@main.route('/login', methods=['GET', 'POST'])
-def login():
-    return index_login()
-
-@main.route('/register', methods=['GET', 'POST'])
-def register():
-    return index_register()
-
-@main.route('/logout')
-def logout():
-    return index_logout()
-
-def login_required(func):
-    """ Custom decorator to check if user is logged in via session. """
-    def wrapper(*args, **kwargs):
-        if 'user_id' not in session:
-            return redirect(url_for('main.login'))
-        return func(*args, **kwargs)
-    wrapper.__name__ = func.__name__
-    return wrapper
-
-# routes.py
+# Route untuk mengedit dan menghapus pesan
 @main.route('/edit_message/<int:message_id>', methods=['GET', 'POST'])
 def edit_message(message_id):
     if 'user_id' not in session:
@@ -259,25 +311,11 @@ def delete_message(message_id):
     flash("Message deleted successfully!", "success")
     return redirect(url_for('main.personal_chat', room_id=room_id))
 
-
-@main.route('/update_profile_picture', methods=['POST'])
-def update_profile_picture():
-    return edit_user()
-
-@main.route('/edit_profile', methods=['GET', 'POST'])
-def edit_profile():
-    if 'user_id' not in session:
-        return redirect(url_for('main.login'))
-    
-
-    return render_template('auth/update.html')
-
-@main.route('/profile')
-def profile():
-    if 'user_id' not in session:
-        return redirect(url_for('main.login'))
-    user_id = session.get('user_id')
-    username= session.get('username')
-    title = 'profil'
-    users=User.query.get(user_id)
-    return render_template('profile.html',title=title,users=users,username=username)
+def login_required(func):
+    """ Custom decorator to check if user is logged in via session. """
+    def wrapper(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('main.login'))
+        return func(*args, **kwargs)
+    wrapper.__name__ = func.__name__
+    return wrapper
