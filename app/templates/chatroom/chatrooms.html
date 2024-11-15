@@ -49,7 +49,7 @@
 
 <div class="chat-container">
     <h2>{{ username }}
-        <a href="{{ url_for('main.profile') }}">{% if profile.gambar_filename %}
+        <a href="{{ url_for('main.profile' , username=profile.username) }}">{% if profile.gambar_filename %}
             <div class="profile">
                 <img src="{{ url_for('static', filename='uploads/' + profile.gambar_filename) }}" alt="{{ profile.username }}'s Profile Picture" style="width: 50px;height: auto;" />
             </div>
@@ -78,7 +78,34 @@
         
       </li>
       {% endfor %}
+      <li>
+        {% for grup in grup_chatroom %}
+        <a href="{{ url_for('main.grup_chat', room_id=grup.id) }}" class="chat-link mb-3">
+          <ul>
+          
+            <li>
+                <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" 
+                     alt="Default Profile Picture" 
+                     class="profile-img rounded-circle" 
+                     style="width: 40px; height: auto;">
+                <strong>Grup:</strong> {{ grup.room_name }}<br>
+                <span class="last-message" 
+                      data-user-id="{{ grup.id }}" 
+                      style="color:black; margin-left: 50px;">
+                      {% if last_messages_grup[grup.id] %}
+                          {{ last_messages_grup[grup.id].message | safe | truncate(52) }}
+                      {% else %}
+                          <em>No messages yet</em>
+                      {% endif %}
+                </span>
+            </li>
+          
+          </ul>
+        </a>
+        {% endfor %}
+      </li>
     </ul>
+    <a href="{{ url_for('main.create_chatroom') }}" class="btn btn-primary">Create grup chat</a>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>

@@ -74,8 +74,7 @@ def chatrooms():
     chatrooms = ChatRoom.query.filter(
         (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
     ).all()
-    grup_chatroom=ChatRoomGrup.query.all()
-    # Subquery untuk mendapatkan pesan terakhir di setiap chatroom
+    
     last_message_subquery = db.session.query(
         Chat.room_id,
         func.max(Chat.timestamp).label('last_timestamp')
@@ -113,6 +112,37 @@ def chatrooms():
         reverse=True
     )
 
+    #membuat pesan terakhir untuk setiap chatroomgrup
+    grup_chatroom=ChatRoomGrup.query.all()
+    # Subquery untuk mendapatkan pesan terakhir di setiap chatroom
+    last_message_subquery_grup = db.session.query(
+        ChatGrup.room_id,
+        func.max(ChatGrup.timestamp).label('last_timestamp')
+    ).group_by(ChatGrup.room_id).subquery()
+
+    # Alias untuk tabel Chat agar lebih mudah diakses
+    last_message_alias_grup = aliased(ChatGrup)
+
+    # Query utama untuk mendapatkan chatroom dan pesan terakhir
+    last_messages_grup = db.session.query(
+        ChatRoomGrup,
+        last_message_alias_grup
+    ).join(
+        last_message_subquery_grup, ChatRoomGrup.id == last_message_subquery_grup.c.room_id
+    ).join(
+        last_message_alias_grup,
+        (last_message_alias_grup.room_id == last_message_subquery_grup.c.room_id) &
+        (last_message_alias_grup.timestamp == last_message_subquery_grup.c.last_timestamp)
+    ).order_by(last_message_alias_grup.timestamp.desc()).all()  # Mengurutkan berdasarkan timestamp terbaru
+
+    # Membuat dictionary pesan terakhir untuk setiap pengguna
+    last_messages_dict_grup = {}
+    for chatroom, message in last_messages_grup:
+        last_messages_dict_grup[chatroom.id] = message
+
+    print(last_messages_dict_grup)
+
+
     title = 'chatroom'
     return render_template(
         'chatroom/chatrooms.html', 
@@ -122,7 +152,9 @@ def chatrooms():
         last_messages=last_messages_dict, 
         title=title, 
         profile=profile,
-        grup_chatroom=grup_chatroom
+        grup_chatroom=grup_chatroom,
+        last_messages_grup=last_messages_dict_grup
+
     )
 
 #membuat grup chatroom
