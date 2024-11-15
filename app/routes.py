@@ -8,7 +8,10 @@ from sqlalchemy.orm import aliased
 from sqlalchemy import func
 from werkzeug.utils import secure_filename  # Tambahkan ini untuk mengamankan nama file
 import os  # Tambahkan ini untuk mengelola path file
-import time  # Tambahkan ini untuk mendapatkan waktu saat ini
+import time
+
+from app.models.chatgrup import ChatGrup
+from app.models.chatroomgrup import ChatRoomGrup  # Tambahkan ini untuk mendapatkan waktu saat ini
 
 
 
@@ -30,22 +33,23 @@ def logout():
     return index_logout()
 
 # Route untuk profil
-@main.route('/profile')
-def profile():
+@main.route('/profile/<username>')
+def profile(username):
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
     user_id = session.get('user_id')
-    username= session.get('username')
+    session_username = session.get('username')
     title = 'profil'
-    users=User.query.get(user_id)
-    return render_template('profile.html',title=title,users=users,username=username)
+    users = User.query.filter_by(username=username).first()
+    return render_template('profile.html', title=title, users=users, username=session_username)
 
-@main.route('/edit_profile', methods=['GET', 'POST'])
-def edit_profile():
+@main.route('/profile/edit_profile/<username>', methods=['GET', 'POST'])
+def edit_profile(username):
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
+    username= session.get('username')
     
-    return render_template('auth/update.html')
+    return render_template('auth/update.html',username=username)
 
 @main.route('/update_profile_picture', methods=['POST'])
 def update_profile_picture():
@@ -70,7 +74,7 @@ def chatrooms():
     chatrooms = ChatRoom.query.filter(
         (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
     ).all()
-
+    grup_chatroom=ChatRoomGrup.query.all()
     # Subquery untuk mendapatkan pesan terakhir di setiap chatroom
     last_message_subquery = db.session.query(
         Chat.room_id,
@@ -117,8 +121,31 @@ def chatrooms():
         chatrooms=chatrooms, 
         last_messages=last_messages_dict, 
         title=title, 
-        profile=profile
+        profile=profile,
+        grup_chatroom=grup_chatroom
     )
+
+#membuat grup chatroom
+
+@main.route('/create_chatroom', methods=['GET','POST'])
+def create_chatroom():
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+
+    user_id = session.get('user_id')
+    username = session.get('username')
+    title = 'create_chatroom'
+    if request.method == 'POST':
+        user_id = session.get('user_id')
+        username = session.get('username')
+        room_name = request.form['room_name']
+        new_chatroom = ChatRoomGrup(room_name=room_name)
+        db.session.add(new_chatroom)
+        db.session.commit()
+        flash('Chatroom created successfully.', 'success')
+        return redirect(url_for('main.chatrooms'))
+    return render_template('chatroom/create_chatroom.html', title=title, username=username)
+
 
 @main.route('/create_private_chat/<username>', methods=['GET', 'POST'])
 def create_private_chat(username):
@@ -170,6 +197,20 @@ def personal_chat(room_id):
     title = 'chatroom ' + chatroom.room_name
 
     return render_template('chatroom/personal_chat.html', chatroom=chatroom, messages=messages, username=username, title=title)
+@main.route('/grup/<int:room_id>', methods=['GET', 'POST'])
+def grup_chat(room_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+
+    user_id = session.get('user_id')
+    username = session.get('username')
+    chatroom = ChatRoomGrup.query.get_or_404(room_id)
+
+
+    messages = ChatGrup.query.filter_by(room_id=room_id).order_by(ChatGrup.timestamp).all()
+    title = 'chatroom grup ' + chatroom.room_name
+
+    return render_template('chatroom/grup_chat.html', chatroom=chatroom, messages=messages, username=username, title=title)
 
 @socketio.on('send_message')
 def handle_send_message(data):
@@ -177,6 +218,7 @@ def handle_send_message(data):
     room_id = data.get('room_id')
     message_content = data.get('message', '').strip()
     image_filename = None
+    is_group_chat = data.get('is_group_chat', False)  # Identifikasi apakah pesan grup atau personal
 
     # Cek jika pesan kosong
     if not message_content and not data.get('image'):
@@ -196,15 +238,21 @@ def handle_send_message(data):
         image_filename = secure_filename(f"{user_id}_{int(time.time())}.png")
         image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
 
-        # Simpan gambar di path yang sesuai
         try:
             image.save(image_path)
             print(f"Image saved to {image_path}")
         except Exception as e:
             print(f"Error saving image: {e}")
 
-    # Simpan pesan ke database
-    new_message = Chat(user_id=user_id, room_id=room_id, message=message_content, image_filename=image_filename)
+    # Tentukan tabel yang digunakan berdasarkan jenis pesan
+    if is_group_chat:
+        # Simpan pesan grup
+        new_message = ChatGrup(user_id=user_id, room_id=room_id, message=message_content, image_filename=image_filename)
+    else:
+        # Simpan pesan personal
+        new_message = Chat(user_id=user_id, room_id=room_id, message=message_content, image_filename=image_filename)
+
+    # Simpan ke database
     db.session.add(new_message)
     db.session.commit()
 
@@ -224,6 +272,7 @@ def handle_send_message(data):
         'message': message_content,
         'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
     }, broadcast=True)
+
 
 
 

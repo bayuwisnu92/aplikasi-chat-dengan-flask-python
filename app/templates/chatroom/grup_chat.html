@@ -4,15 +4,7 @@
 
 {% block content %}
 <div class="container chat-container">
-    <a href="{{ url_for('main.profile',username=chatroom.user1.username if chatroom.user1_id != session['user_id'] else chatroom.user2.username) }}" style="text-decoration: none;"><h2 class="chat-header">{% if chatroom.user1_id != session['user_id'] and chatroom.user1.gambar_filename %} 
-        <img src="{{ url_for('static', filename='uploads/' + chatroom.user1.gambar_filename) }}" alt="" style="width: 50px; height: auto;">
-    {% elif chatroom.user2.gambar_filename %}
-        <img src="{{ url_for('static', filename='uploads/' + chatroom.user2.gambar_filename) }}" alt="" style="width: 50px; height: auto;">
-    {% else %}
-        <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" alt="Default Profile Picture" class="profile-img rounded-circle" style="width: 40px; height: auto;">
-    {% endif %}
-        
-        {{ chatroom.user1.username if chatroom.user1_id != session['user_id'] else chatroom.user2.username }}</h2></a>
+    <h2 class="chat-header"><h2>Chatroom: {{ chatroom.room_name }}</h2>
     
     
 
@@ -49,7 +41,7 @@
             
             <!-- Tombol Kirim -->
             <button type="submit" class="btn btn-primary send-btn">
-                <i class="bi bi-send-fill"></i>
+                <i class="bi bi-send-fill"></i> kirim
             </button>
         </div>
     </form>
@@ -227,10 +219,12 @@
 
     // Emit pesan ke server melalui Socket.IO
     socket.emit('send_message', {
-        room_id: roomId,
-        message: messageContent,
-        image: imageData  // Mengirim data gambar dalam base64 jika ada
-    });
+    room_id: roomId,
+    message: messageContent,
+    image: imageData,
+    is_group_chat: true
+});
+
 
     // Reset input setelah mengirim
     messageInput.value = '';
