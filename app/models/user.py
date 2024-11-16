@@ -10,5 +10,22 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)  # Menyimpan waktu pembuatan
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)  # Waktu pembaruan
 
+    # Relasi ke permintaan pertemanan
+    # Relasi ke permintaan pertemanan yang dikirim
+    sent_requests = db.relationship(
+        'FriendRequest', 
+        foreign_keys='FriendRequest.sender_id', 
+        backref='request_sender', 
+        lazy=True
+    )
+    
+    # Relasi ke permintaan pertemanan yang diterima
+    received_requests = db.relationship(
+        'FriendRequest', 
+        foreign_keys='FriendRequest.receiver_id', 
+        backref='request_receiver', 
+        lazy=True
+    )
+
     def __repr__(self):
         return f"<User {self.username}>"

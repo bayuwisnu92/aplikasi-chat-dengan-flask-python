@@ -1,0 +1,41 @@
+{% extends 'index.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %} 
+<h2>Daftar Pengguna</h2>
+    <p>Selamat datang, {{ current_user.username }}!</p>
+    
+    <h3>Pengguna Lain</h3>
+    <ul>
+        {% for user in users %}
+        <li>
+            {{ user.username }}
+            <form action="{{ url_for('friend.send_request', receiver_id=user.id) }}" method="POST">
+                <button type="submit">Tambah Teman</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <h3>Permintaan Pertemanan Masuk</h3>
+    <ul>
+        {% for request in current_user.received_requests %}
+        {% if request.status == 'pending' %}
+        <li>
+            {{ request.sender.username }}
+            <form action="{{ url_for('friend.accept_request', request_id=request.id) }}" method="POST">
+                <button type="submit">Terima</button>
+            </form>
+            <form action="{{ url_for('friend.reject_request', request_id=request.id) }}" method="POST">
+                <button type="submit">Tolak</button>
+            </form>
+        </li>
+        {% endif %}
+        {% endfor %}
+    </ul>
+
+
+
+
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'index.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %} 
+<h3>Permintaan Pertemanan</h3>
+<ul>
+    {% for request in friend_requests %}
+    <li>
+        {{ request.sender.username }}
+        <form method="post" action="{{ url_for('friend.accept_request', request_id=request.id) }}">
+            <button type="submit">Terima</button>
+        </form>
+        <form method="post" action="{{ url_for('friend.reject_request', request_id=request.id) }}">
+            <button type="submit">Tolak</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+
+
+
+{% endblock %}

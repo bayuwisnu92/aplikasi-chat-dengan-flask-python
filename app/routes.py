@@ -5,13 +5,14 @@ from app.models import User, ChatRoom, Chat
 from app import allowed_file, db, socketio  # Import socketio
 from flask_socketio import emit, join_room, leave_room
 from sqlalchemy.orm import aliased
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from werkzeug.utils import secure_filename  # Tambahkan ini untuk mengamankan nama file
 import os  # Tambahkan ini untuk mengelola path file
 import time
 
 from app.models.chatgrup import ChatGrup
-from app.models.chatroomgrup import ChatRoomGrup  # Tambahkan ini untuk mendapatkan waktu saat ini
+from app.models.chatroomgrup import ChatRoomGrup
+from app.models.friendrequest import FriendRequest  # Tambahkan ini untuk mendapatkan waktu saat ini
 
 
 
@@ -55,6 +56,11 @@ def edit_profile(username):
 def update_profile_picture():
     return edit_user()
 
+
+def get_current_user():
+    if 'user_id' in session:
+        return User.query.get(session['user_id'])
+    return None
 # Route untuk chatroom
 @main.route('/', methods=['GET'])
 def chatrooms():
@@ -66,10 +72,15 @@ def chatrooms():
     
     # Ambil informasi profil pengguna saat ini
     profile = User.query.filter_by(id=user_id).first()
-    
+    current_user = get_current_user()
     # Ambil semua pengguna kecuali pengguna saat ini
-    users = User.query.filter(User.id != user_id).all()
-
+    users = User.query.join(
+    FriendRequest, 
+    or_(
+        (FriendRequest.sender_id == current_user.id) & (FriendRequest.receiver_id == User.id),
+        (FriendRequest.receiver_id == current_user.id) & (FriendRequest.sender_id == User.id)
+    )
+    ).filter(FriendRequest.status == 'accepted').all()
     # Ambil chatroom yang terkait dengan pengguna
     chatrooms = ChatRoom.query.filter(
         (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
@@ -140,8 +151,8 @@ def chatrooms():
     for chatroom, message in last_messages_grup:
         last_messages_dict_grup[chatroom.id] = message
 
-    print(last_messages_dict_grup)
-
+    
+    print(last_messages_dict)
 
     title = 'chatroom'
     return render_template(

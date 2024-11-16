@@ -2,11 +2,15 @@
 
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<h1>Update poto profile</h1>
-<form action="{{ url_for('main.update_profile_picture') }}" method="post" enctype="multipart/form-data">
-    <label for="profile_picture">Pilih Foto Profil:</label>
-    <input type="file" name="profile_picture" id="profile_picture" accept="image/*" required>
-    <button type="submit">Update Foto Profil</button>
-</form>
+<div class="container mt-5">
+    <h1 class="text-center">Update Poto Profil</h1>
+    <form action="{{ url_for('main.update_profile_picture') }}" method="post" enctype="multipart/form-data" class="form-modern">
+        <div class="form-group">
+            <label for="profile_picture">Pilih Foto Profil:</label>
+            <input type="file" name="profile_picture" id="profile_picture" accept="image/*" required class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Update Foto Profil</button>
+    </form>
+</div>
 
 {% endblock %}

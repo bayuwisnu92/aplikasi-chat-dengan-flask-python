@@ -69,11 +69,17 @@
 {% endif %}
 
          {{ user.username }} <br>
-          {% if user.id in last_messages %}
-            <span class="last-message" data-user-id="{{ user.id }}" style="color:black;margin-left: 50px;">{{ last_messages[user.id].message | safe | truncate(52) }}</span>
-          {% else %}
-            <span class="last-message" data-user-id="{{ user.id }}" style="margin-left: 50px;color: grey;">Tidak ada pesan terakhir</span>
-          {% endif %}
+         {% if user.id in last_messages %}
+    <span class="last-message" data-user-id="{{ user.id }}" style="color:black;margin-left: 50px;">
+        {{ last_messages[user.id].message | safe | truncate(52) }}
+    </span>
+{% else %}
+    <span class="last-message" data-user-id="{{ user.id }}" style="margin-left: 50px;color: grey;">
+        Tidak ada pesan terakhir
+    </span>
+{% endif %}
+
+     
         </a>
         
       </li>

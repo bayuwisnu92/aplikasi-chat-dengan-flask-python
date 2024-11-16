@@ -23,7 +23,11 @@
             {% endif %}
         </div>
         <!-- Tombol Edit Profil -->
-        <a href="{{ url_for('main.edit_profile') }}" style="display: inline-block; padding: 8px 16px; background-color: #4267B2; color: white; border-radius: 4px; text-decoration: none;">Edit Profile Picture</a>
+         {% if username == users.username %}
+        <a href="{{ url_for('main.edit_profile', username=users.username) }}" style="display: inline-block; padding: 8px 16px; background-color: #4267B2; color: white; border-radius: 4px; text-decoration: none;">Edit Profile Picture</a>
+        {% else %}
+        <p title="Anda tidak memiliki izin untuk mengedit profil ini">tidak dapat edit</p>
+        {% endif %}
     </div>
 
     <div class="profile-info" style="padding: 20px; text-align: center;">

@@ -1,0 +1,82 @@
+{% extends 'index.html' %}
+
+{% block title %}Create Chatroom{% endblock %}
+
+{% block content %}
+<style>
+    /* Page header styling */
+    h2 {
+        font-size: 1.8em;
+        color: #075e54;
+        margin-bottom: 20px;
+    }
+
+    /* Form container */
+    form {
+        max-width: 400px;
+        margin: 0 auto;
+        background-color: #f9f9f9;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Form label */
+    label {
+        font-size: 1em;
+        color: #333;
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    /* Input field styling */
+    input[type="text"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        outline: none;
+    }
+
+    /* Submit button styling */
+    button[type="submit"] {
+        width: 100%;
+        padding: 10px;
+        background-color: #128c7e;
+        color: white;
+        font-size: 1em;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    button[type="submit"]:hover {
+        background-color: #075e54;
+    }
+
+    /* Back to Chatrooms link styling */
+    .back-link {
+        display: inline-block;
+        margin-top: 20px;
+        text-decoration: none;
+        color: #128c7e;
+        font-weight: bold;
+    }
+    .back-link:hover {
+        color: #075e54;
+    }
+</style>
+<div class="container">
+    
+<h2 class="text-center">Create a New grup_chatroom</h2>
+
+<form method="POST" action="{{ url_for('main.create_chatroom') }}">
+    <label for="room_name">Chatroom Name:</label>
+    <input type="text" name="room_name" id="room_name" required>
+    <button type="submit">Create</button>
+</form>
+
+<a href="{{ url_for('main.chatrooms') }}" class="back-link text-center">Back to Chatrooms</a>
+</div>
+{% endblock %}

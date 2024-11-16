@@ -9,6 +9,7 @@ from flask_socketio import SocketIO, emit  # Menambahkan import SocketIO dan emi
 from werkzeug.utils import secure_filename
 
 
+
 load_dotenv()
 
 db = SQLAlchemy()
@@ -43,6 +44,8 @@ def create_app():
     # Registrasi blueprint
     from .routes import main  # Mengimpor blueprint
     app.register_blueprint(main)
+    from .friend_routes import friend_bp
+    app.register_blueprint(friend_bp)
 
     return app
 
