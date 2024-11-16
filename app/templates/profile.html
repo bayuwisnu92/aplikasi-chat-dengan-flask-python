@@ -39,7 +39,15 @@
     <div class="additional-info" style="display: flex; justify-content: space-around; padding: 20px;">
         <div class="info-item" style="text-align: center;">
             <h4 style="margin: 0; color: #333;">Friends</h4>
-            <p style="color: #777;">{{ users.friends_count }}</p> <!-- Ganti dengan data sebenarnya -->
+            <p style="color: #777;">{% set count = 0 %}
+                {% for request in users.sent_requests %}
+                    {% if request.status == 'accepted' %}
+                        {% set count = count + 1 %}
+                        <li>
+                            {{ count }}. {{ request.receiver.username }} - Status: {{ request.status }}
+                        </li>
+                    {% endif %}
+                {% endfor %}</p> <!-- Ganti dengan data sebenarnya -->
         </div>
         <div class="info-item" style="text-align: center;">
             <h4 style="margin: 0; color: #333;">Posts</h4>

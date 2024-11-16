@@ -22,6 +22,8 @@
                    
                    
                     
+                    
+                    {% if session.get('user_id') and session.get('username') %}
                     <li class="nav-item">
                       <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">daftar chat</a>
                   </li>
@@ -31,8 +33,6 @@
                     <li class="nav-item">
                       <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/profile/{{ username }}">profile</a>
                   </li>
-                 
-                    {% if session.get('user_id') and session.get('username') %}
                         <!-- Tampilkan jika sudah login -->
                 
                       </li>

@@ -11,6 +11,7 @@ import os  # Tambahkan ini untuk mengelola path file
 import time
 
 from app.models.chatgrup import ChatGrup
+from app.models.chatgrupmember import ChatGroupMember
 from app.models.chatroomgrup import ChatRoomGrup
 from app.models.friendrequest import FriendRequest  # Tambahkan ini untuk mendapatkan waktu saat ini
 
@@ -73,14 +74,16 @@ def chatrooms():
     # Ambil informasi profil pengguna saat ini
     profile = User.query.filter_by(id=user_id).first()
     current_user = get_current_user()
+    
     # Ambil semua pengguna kecuali pengguna saat ini
     users = User.query.join(
-    FriendRequest, 
-    or_(
-        (FriendRequest.sender_id == current_user.id) & (FriendRequest.receiver_id == User.id),
-        (FriendRequest.receiver_id == current_user.id) & (FriendRequest.sender_id == User.id)
-    )
+        FriendRequest, 
+        or_(
+            (FriendRequest.sender_id == current_user.id) & (FriendRequest.receiver_id == User.id),
+            (FriendRequest.receiver_id == current_user.id) & (FriendRequest.sender_id == User.id)
+        )
     ).filter(FriendRequest.status == 'accepted').all()
+    
     # Ambil chatroom yang terkait dengan pengguna
     chatrooms = ChatRoom.query.filter(
         (ChatRoom.user1_id == user_id) | (ChatRoom.user2_id == user_id)
@@ -123,18 +126,22 @@ def chatrooms():
         reverse=True
     )
 
-    #membuat pesan terakhir untuk setiap chatroomgrup
-    grup_chatroom=ChatRoomGrup.query.all()
-    # Subquery untuk mendapatkan pesan terakhir di setiap chatroom
+    # Mendapatkan daftar grup yang diikuti oleh user
+    user_rooms = ChatGroupMember.query.filter_by(user_id=user_id).all()
+    user_room_ids = [room.room_id for room in user_rooms]  # Ambil ID room yang diikuti user
+
+    # Subquery untuk mendapatkan pesan terakhir di setiap chatroom yang diikuti oleh user
     last_message_subquery_grup = db.session.query(
         ChatGrup.room_id,
         func.max(ChatGrup.timestamp).label('last_timestamp')
-    ).group_by(ChatGrup.room_id).subquery()
+    ).filter(ChatGrup.room_id.in_(user_room_ids)).group_by(ChatGrup.room_id).subquery()  # Hanya grup yang diikuti user
 
-    # Alias untuk tabel Chat agar lebih mudah diakses
+    # Alias untuk tabel ChatGrup agar lebih mudah diakses
     last_message_alias_grup = aliased(ChatGrup)
 
-    # Query utama untuk mendapatkan chatroom dan pesan terakhir
+    # Query utama untuk mendapatkan chatroom yang diikuti user dan pesan terakhir
+    grup_chatroom = ChatRoomGrup.query.filter(ChatRoomGrup.id.in_(user_room_ids)).all()
+
     last_messages_grup = db.session.query(
         ChatRoomGrup,
         last_message_alias_grup
@@ -144,16 +151,22 @@ def chatrooms():
         last_message_alias_grup,
         (last_message_alias_grup.room_id == last_message_subquery_grup.c.room_id) &
         (last_message_alias_grup.timestamp == last_message_subquery_grup.c.last_timestamp)
+    ).filter(
+        ChatRoomGrup.id.in_(user_room_ids)  # Filter hanya untuk grup yang diikuti user
     ).order_by(last_message_alias_grup.timestamp.desc()).all()  # Mengurutkan berdasarkan timestamp terbaru
 
     # Membuat dictionary pesan terakhir untuk setiap pengguna
     last_messages_dict_grup = {}
     for chatroom, message in last_messages_grup:
         last_messages_dict_grup[chatroom.id] = message
+    # Ambil grup yang publik dan belum diikuti oleh user saat ini
+    joined_groups = db.session.query(ChatGroupMember.room_id).filter_by(user_id=user_id).all()
+    joined_group_ids = [room_id for (room_id,) in joined_groups]
 
-    
-    print(last_messages_dict)
-
+    public_rooms = ChatRoomGrup.query.filter(
+        ChatRoomGrup.is_public == True,
+        ~ChatRoomGrup.id.in_(joined_group_ids)
+    ).all()
     title = 'chatroom'
     return render_template(
         'chatroom/chatrooms.html', 
@@ -163,31 +176,41 @@ def chatrooms():
         last_messages=last_messages_dict, 
         title=title, 
         profile=profile,
+        user_rooms=user_rooms,
+        last_messages_grup=last_messages_dict_grup,
         grup_chatroom=grup_chatroom,
-        last_messages_grup=last_messages_dict_grup
-
+        public_rooms=public_rooms
     )
 
 #membuat grup chatroom
 
-@main.route('/create_chatroom', methods=['GET','POST'])
+@main.route('/create_chatroom', methods=['GET', 'POST'])
 def create_chatroom():
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
 
     user_id = session.get('user_id')
     username = session.get('username')
-    title = 'create_chatroom'
+    title = 'Create Chatroom'
+
     if request.method == 'POST':
-        user_id = session.get('user_id')
-        username = session.get('username')
         room_name = request.form['room_name']
-        new_chatroom = ChatRoomGrup(room_name=room_name)
+
+        # Buat chatroom baru
+        new_chatroom = ChatRoomGrup(room_name=room_name, created_by=user_id)
         db.session.add(new_chatroom)
         db.session.commit()
+
+        # Tambahkan pembuat sebagai admin di ChatGroupMember
+        new_member = ChatGroupMember(user_id=user_id, room_id=new_chatroom.id, is_admin=True)
+        db.session.add(new_member)
+        db.session.commit()
+
         flash('Chatroom created successfully.', 'success')
         return redirect(url_for('main.chatrooms'))
+
     return render_template('chatroom/create_chatroom.html', title=title, username=username)
+
 
 
 @main.route('/create_private_chat/<username>', methods=['GET', 'POST'])
@@ -249,11 +272,17 @@ def grup_chat(room_id):
     username = session.get('username')
     chatroom = ChatRoomGrup.query.get_or_404(room_id)
 
+    # Periksa apakah user adalah anggota grup
+    member = ChatGroupMember.query.filter_by(user_id=user_id, room_id=room_id).first()
+    if not member:
+        flash('You are not a member of this chat room.', 'danger')
+        return redirect(url_for('main.chatrooms'))
 
     messages = ChatGrup.query.filter_by(room_id=room_id).order_by(ChatGrup.timestamp).all()
-    title = 'chatroom grup ' + chatroom.room_name
+    title = 'Chatroom Grup ' + chatroom.room_name
 
     return render_template('chatroom/grup_chat.html', chatroom=chatroom, messages=messages, username=username, title=title)
+
 
 @socketio.on('send_message')
 def handle_send_message(data):
@@ -411,3 +440,23 @@ def login_required(func):
         return func(*args, **kwargs)
     wrapper.__name__ = func.__name__
     return wrapper
+
+@main.route('/join_group/<int:room_id>', methods=['POST'])
+def join_group(room_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+
+    user_id = session.get('user_id')
+
+    # Cek apakah user sudah menjadi anggota
+    existing_member = ChatGroupMember.query.filter_by(user_id=user_id, room_id=room_id).first()
+    if existing_member:
+        flash('You are already a member of this group.', 'info')
+    else:
+        # Tambah user ke grup
+        new_member = ChatGroupMember(user_id=user_id, room_id=room_id)
+        db.session.add(new_member)
+        db.session.commit()
+        flash('Successfully joined the group.', 'success')
+
+    return redirect(url_for('main.grup_chat', room_id=room_id))

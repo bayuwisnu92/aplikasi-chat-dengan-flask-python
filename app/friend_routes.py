@@ -19,10 +19,11 @@ def user_list():
     if not current_user:
         flash("Silakan login terlebih dahulu.", "danger")
         return redirect(url_for('auth.login'))
+    username = current_user.username
 
     users = User.query.filter(User.id != current_user.id).all()
     
-    return render_template('user_list.html', users=users, current_user=current_user)
+    return render_template('user_list.html', users=users, current_user=current_user, username=username)
 
 # Kirim Permintaan Pertemanan
 @friend_bp.route('/send_request/<int:receiver_id>', methods=['POST'])

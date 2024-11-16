@@ -3,39 +3,46 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %} 
-<h2>Daftar Pengguna</h2>
-    <p>Selamat datang, {{ current_user.username }}!</p>
+<div class="container mt-4">
+    <h2 class="mb-4">Daftar Pengguna</h2>
     
-    <h3>Pengguna Lain</h3>
-    <ul>
+    <div class="alert alert-primary">
+        Selamat datang, <strong>{{ current_user.username }}</strong>!
+    </div>
+    
+    <h3 class="mt-4">Pengguna Lain</h3>
+    <ul class="list-group">
         {% for user in users %}
-        <li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
             {{ user.username }}
-            <form action="{{ url_for('friend.send_request', receiver_id=user.id) }}" method="POST">
-                <button type="submit">Tambah Teman</button>
+            <form action="{{ url_for('friend.send_request', receiver_id=user.id) }}" method="POST" class="mb-0">
+                <button type="submit" class="btn btn-sm btn-outline-success">Tambah Teman</button>
             </form>
         </li>
         {% endfor %}
     </ul>
 
-    <h3>Permintaan Pertemanan Masuk</h3>
-    <ul>
+    <h3 class="mt-5">Permintaan Pertemanan Masuk</h3>
+    {% if current_user.received_requests %}
+    <ul class="list-group">
         {% for request in current_user.received_requests %}
         {% if request.status == 'pending' %}
-        <li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
             {{ request.sender.username }}
-            <form action="{{ url_for('friend.accept_request', request_id=request.id) }}" method="POST">
-                <button type="submit">Terima</button>
-            </form>
-            <form action="{{ url_for('friend.reject_request', request_id=request.id) }}" method="POST">
-                <button type="submit">Tolak</button>
-            </form>
+            <div>
+                <form action="{{ url_for('friend.accept_request', request_id=request.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-success">Terima</button>
+                </form>
+                <form action="{{ url_for('friend.reject_request', request_id=request.id) }}" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-danger">Tolak</button>
+                </form>
+            </div>
         </li>
         {% endif %}
         {% endfor %}
     </ul>
-
-
-
-
+    {% else %}
+    <p class="text-muted">Tidak ada permintaan pertemanan masuk.</p>
+    {% endif %}
+</div>
 {% endblock %}
