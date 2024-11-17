@@ -4,7 +4,12 @@
 
 {% block content %}
 <div class="container chat-container">
-    <h2 class="chat-header"><h2>Grup: {{ chatroom.room_name }}</h2>
+    <h2 class="chat-header"><h2>Grup: {{ chatroom.room_name }}
+        {% if is_admin %}
+        <a href="{{ url_for('main.generate_invite_link', room_id=chatroom.id) }}">Generate Invite Link</a>
+        {% endif %}
+
+    </h2>
     
     
 

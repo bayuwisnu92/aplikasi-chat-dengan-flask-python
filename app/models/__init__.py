@@ -5,3 +5,4 @@ from .chatroomgrup import ChatRoomGrup
 from .chatgrup import ChatGrup
 from .friendrequest import FriendRequest
 from .chatgrupmember import ChatGroupMember
+from .groupinvitation import GroupInvitations

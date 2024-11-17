@@ -1,0 +1,8 @@
+{% extends "index.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h2>Share this link to invite others to your group:</h2>
+    <input type="text" value="{{ invite_link }}" readonly onclick="this.select()">
+    <p>Copy the link above to invite users.</p>
+    <a href="{{ url_for('main.chatrooms') }}">Go back to Home</a>
+{% endblock %}

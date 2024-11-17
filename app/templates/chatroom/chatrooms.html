@@ -110,11 +110,10 @@
                       {% if last_messages_grup[grup.id] %}
                           {{ last_messages_grup[grup.id].message | safe | truncate(52) }}
                       {% else %}
-                          <em>No messages yet</em>
+                          <span style="color: grey;">tidak ada pesan terakhir</span>
                       {% endif %}
                 </span>
             </li>
-          
           </ul>
         </a>
         {% endfor %}
@@ -135,7 +134,7 @@
             </div>
             <!-- Tombol Join -->
             <div class="col-4 col-md-2 text-end">
-                <form action="{{ url_for('main.join_group', room_id=room.id) }}" method="post" class="d-inline">
+                <form action="{{ url_for('main.join_group_satu', room_id=room.id) }}" method="post" class="d-inline">
                     <button type="submit" class="btn btn-success btn-sm w-100">Join</button>
                 </form>
             </div>
@@ -170,30 +169,26 @@
     </div>
 
     <!-- Modal Daftar Pengguna -->
-<div class="modal fade" id="userListModal" tabindex="-1" aria-labelledby="userListModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <!-- Header Modal -->
-            <div class="modal-header">
-                <h5 class="modal-title" id="userListModalLabel">Daftar Pengguna</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <!-- Body Modal -->
-            <div class="modal-body">
-                <ul class="list-group">
-                    {% for userkan in users_bukan %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ userkan.username }}
-                        <form action="{{ url_for('friend.send_request', receiver_id=userkan.id) }}" method="POST" class="mb-0">
-                            <button type="submit" class="btn btn-sm btn-outline-success">Tambah Teman</button>
-                        </form>
-                    </li>
-                    {% endfor %}
-                </ul>
+    <div class="modal fade" id="userListModal" tabindex="-1" aria-labelledby="userListModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userListModalLabel">Cari Pengguna</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Input Pencarian -->
+                    <input type="text" id="searchUserInput" class="form-control mb-3" placeholder="Cari berdasarkan username atau email">
+    
+                    <!-- Daftar Pengguna -->
+                    <ul class="list-group" id="userList">
+                        <!-- Hasil pencarian akan ditampilkan di sini -->
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
-</div>
+    
 
 <!-- Modal Permintaan Pertemanan -->
 <div class="modal fade" id="friendRequestModal" tabindex="-1" aria-labelledby="friendRequestModalLabel" aria-hidden="true">
@@ -276,6 +271,39 @@
         console.log("Element for user_id not found:", data.user_id);  // Log jika elemen tidak ditemukan
     }
 });
+
+// untuk pencarian
+document.getElementById('searchUserInput').addEventListener('input', function() {
+        const query = this.value;
+
+        // Jika input kosong, kosongkan hasil
+        if (query.trim() === '') {
+            document.getElementById('userList').innerHTML = '';
+            return;
+        }
+
+        // Kirim permintaan ke server
+        fetch(`/search_user?query=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                const userList = document.getElementById('userList');
+                userList.innerHTML = ''; // Kosongkan daftar sebelumnya
+
+                // Tampilkan hasil pencarian
+                data.forEach(user => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    listItem.innerHTML = `
+                        ${user.username} (${user.email})
+                        <form action="/send_request/${user.id}" method="POST" class="mb-0">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Tambah Teman</button>
+                        </form>
+                    `;
+                    userList.appendChild(listItem);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+    });
 </script>
 
 {% endblock %}

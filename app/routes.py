@@ -298,11 +298,15 @@ def grup_chat(room_id):
     if not member:
         flash('You are not a member of this chat room.', 'danger')
         return redirect(url_for('main.chatrooms'))
+    
+    
+    
+    is_admin = member.is_admin if member else False
 
     messages = ChatGrup.query.filter_by(room_id=room_id).order_by(ChatGrup.timestamp).all()
     title = 'Chatroom Grup ' + chatroom.room_name
 
-    return render_template('chatroom/grup_chat.html', chatroom=chatroom, messages=messages, username=username, title=title)
+    return render_template('chatroom/grup_chat.html', chatroom=chatroom, messages=messages, username=username, title=title, is_admin=is_admin)
 
 
 @socketio.on('send_message')
@@ -527,7 +531,7 @@ def login_required(func):
     return wrapper
 
 @main.route('/join_group/<int:room_id>', methods=['POST'])
-def join_group(room_id):
+def join_group_satu(room_id):
     if 'user_id' not in session:
         return redirect(url_for('main.login'))
 
@@ -545,3 +549,73 @@ def join_group(room_id):
         flash('Successfully joined the group.', 'success')
 
     return redirect(url_for('main.grup_chat', room_id=room_id))
+@main.route('/search_user')
+def search_user():
+    query = request.args.get('query', '').strip()
+    if not query:
+        return jsonify([])  # Kembalikan daftar kosong jika query kosong
+
+    # Cari pengguna berdasarkan username atau email
+    users = User.query.filter(
+        (User.username.ilike(f"%{query}%")) | (User.email.ilike(f"%{query}%"))
+    ).all()
+
+    # Konversi hasil ke format JSON
+    user_data = [{"id": user.id, "username": user.username, "email": user.email} for user in users]
+    return jsonify(user_data)
+
+@main.route('/group/<int:room_id>/invite_link', methods=['GET'])
+def generate_invite_link(room_id):
+    # Cek apakah user sudah login
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Anda harus login terlebih dahulu', 'error')
+        return redirect(url_for('login'))
+
+    # Cek apakah grup dengan room_id ada
+    group = ChatRoomGrup.query.get(room_id)
+    if not group:
+        flash('Grup tidak ditemukan', 'error')
+        return redirect(url_for('home'))
+
+    # Cek apakah user adalah admin grup
+    is_admin = ChatGroupMember.query.filter_by(user_id=user_id, room_id=room_id, is_admin=True).first()
+    if not is_admin:
+        flash('Anda tidak memiliki akses untuk membuat link undangan grup ini', 'error')
+        return redirect(url_for('home'))
+
+    # Generate link undangan
+    invite_link = f"http://127.0.0.1:5000/group/join/{group.invite_token}"
+
+    # Render halaman untuk menampilkan link undangan
+    return render_template('invite_link.html', invite_link=invite_link)
+
+
+@main.route('/group/join/<invite_token>', methods=['GET'])
+def join_group(invite_token):
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Anda harus login terlebih dahulu', 'error')
+        return redirect(url_for('login'))
+
+    # Cari grup berdasarkan token
+    group = ChatRoomGrup.query.filter_by(invite_token=invite_token).first()
+
+    if not group:
+        flash('Link undangan tidak valid', 'error')
+        return redirect(url_for('main.chatrooms'))
+
+    # Cek apakah user sudah menjadi anggota
+    member = ChatGroupMember.query.filter_by(user_id=user_id, room_id=group.id).first()
+    if member:
+        flash('Anda sudah bergabung di grup ini', 'info')
+        return redirect(url_for('main.chatrooms', group_id=group.id))
+
+    # Tambahkan user sebagai anggota baru
+    new_member = ChatGroupMember(user_id=user_id, room_id=group.id)  # Menggunakan room_id
+    db.session.add(new_member)
+    db.session.commit()
+
+    flash('Berhasil bergabung ke grup!', 'success')
+    return redirect(url_for('main.chatrooms', group_id=group.id))
+

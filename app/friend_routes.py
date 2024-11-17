@@ -12,31 +12,31 @@ def get_current_user():
     return None
 
 # Daftar pengguna lain
-@friend_bp.route('/users')
+# @friend_bp.route('/users')
 
-def user_list():
-    current_user = get_current_user()
-    if not current_user:
-        flash("Silakan login terlebih dahulu.", "danger")
-        return redirect(url_for('auth.login'))
-    username = current_user.username
+# def user_list():
+#     current_user = get_current_user()
+#     if not current_user:
+#         flash("Silakan login terlebih dahulu.", "danger")
+#         return redirect(url_for('auth.login'))
+#     username = current_user.username
 
-    # Filter pengguna yang tidak sama dengan pengguna saat ini dan tidak berteman
-    users = User.query.filter(
-    User.id != current_user.id
-    ).filter(
-        ~User.id.in_(
-            db.session.query(FriendRequest.receiver_id)
-            .filter(FriendRequest.sender_id == current_user.id, FriendRequest.status == 'accepted')
-        )
-    ).filter(
-        ~User.id.in_(
-            db.session.query(FriendRequest.sender_id)
-            .filter(FriendRequest.receiver_id == current_user.id, FriendRequest.status == 'accepted')
-        )
-    ).all()
+#     # Filter pengguna yang tidak sama dengan pengguna saat ini dan tidak berteman
+#     users = User.query.filter(
+#     User.id != current_user.id
+#     ).filter(
+#         ~User.id.in_(
+#             db.session.query(FriendRequest.receiver_id)
+#             .filter(FriendRequest.sender_id == current_user.id, FriendRequest.status == 'accepted')
+#         )
+#     ).filter(
+#         ~User.id.in_(
+#             db.session.query(FriendRequest.sender_id)
+#             .filter(FriendRequest.receiver_id == current_user.id, FriendRequest.status == 'accepted')
+#         )
+#     ).all()
     
-    return render_template('user_list.html', users=users, current_user=current_user, username=username)
+#     return render_template('user_list.html', users=users, current_user=current_user, username=username)
 
 # Kirim Permintaan Pertemanan
 @friend_bp.route('/send_request/<int:receiver_id>', methods=['POST'])

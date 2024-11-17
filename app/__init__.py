@@ -46,6 +46,11 @@ def create_app():
     app.register_blueprint(main)
     from .friend_routes import friend_bp
     app.register_blueprint(friend_bp)
+    from .group_routes import group_bp
+    app.register_blueprint(group_bp)
+    
+
+
 
     return app
 
