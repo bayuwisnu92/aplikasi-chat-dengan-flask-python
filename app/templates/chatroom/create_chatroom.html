@@ -69,14 +69,14 @@
 </style>
 <div class="container">
     
-<h2 class="text-center">Create a New grup_chatroom</h2>
+<h2 class="text-center">Buat chatgrup</h2>
 
 <form method="POST" action="{{ url_for('main.create_chatroom') }}">
-    <label for="room_name">Chatroom Name:</label>
+    <label for="room_name">ChatGrup Name:</label>
     <input type="text" name="room_name" id="room_name" required>
-    <button type="submit">Create</button>
+    <button type="submit">Buat Grup</button>
 </form>
 
-<a href="{{ url_for('main.chatrooms') }}" class="back-link text-center">Back to Chatrooms</a>
+<a href="{{ url_for('main.chatrooms') }}" class="back-link text-center">kembali Ke Daftar chat</a>
 </div>
 {% endblock %}

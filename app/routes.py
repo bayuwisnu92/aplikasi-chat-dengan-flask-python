@@ -70,7 +70,10 @@ def chatrooms():
     
     user_id = session.get('user_id')
     username = session.get('username')
-    
+    current_user = get_current_user()
+    if not current_user:
+        flash("Silakan login terlebih dahulu.", "danger")
+        return redirect(url_for('auth.login'))
     # Ambil informasi profil pengguna saat ini
     profile = User.query.filter_by(id=user_id).first()
     current_user = get_current_user()
@@ -167,6 +170,20 @@ def chatrooms():
         ChatRoomGrup.is_public == True,
         ~ChatRoomGrup.id.in_(joined_group_ids)
     ).all()
+    # Filter pengguna yang tidak sama dengan pengguna saat ini dan tidak berteman
+    users_bukan = User.query.filter(
+    User.id != current_user.id
+    ).filter(
+        ~User.id.in_(
+            db.session.query(FriendRequest.receiver_id)
+            .filter(FriendRequest.sender_id == current_user.id, FriendRequest.status == 'accepted')
+        )
+    ).filter(
+        ~User.id.in_(
+            db.session.query(FriendRequest.sender_id)
+            .filter(FriendRequest.receiver_id == current_user.id, FriendRequest.status == 'accepted')
+        )
+    ).all()
     title = 'chatroom'
     return render_template(
         'chatroom/chatrooms.html', 
@@ -179,7 +196,11 @@ def chatrooms():
         user_rooms=user_rooms,
         last_messages_grup=last_messages_dict_grup,
         grup_chatroom=grup_chatroom,
-        public_rooms=public_rooms
+        public_rooms=public_rooms,
+        users_bukan=users_bukan,
+        current_user=current_user
+
+
     )
 
 #membuat grup chatroom
@@ -393,9 +414,73 @@ def edit_message(message_id):
 
     flash("Message updated successfully!", "success")
     return redirect(url_for('main.personal_chat', room_id=message.room_id))
+@main.route('/edit_message_grup/<int:message_id>', methods=['GET', 'POST'])
+def edit_message_grup(message_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    
+    user_id = session.get('user_id')
+    new_content = request.form.get('message_content')
+    
+    # Dapatkan pesan yang ingin diedit
+    message = ChatGrup.query.get_or_404(message_id)
+
+    # Pastikan hanya pemilik pesan yang bisa mengeditnya
+    if message.user_id != user_id:
+        flash("You don't have permission to edit this message.", "danger")
+        return redirect(url_for('main.personal_chat', room_id=message.room_id))
+
+    # Update isi pesan dan simpan ke database
+    message.message = new_content
+    db.session.commit()
+
+    # Kirim pembaruan pesan ke pengguna lain di room yang sama tanpa 'broadcast'
+    socketio.emit('edit_message', {
+        'message_id': message_id,
+        'new_content': new_content,
+        'timestamp': message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+    }, room=message.room_id)
+
+    flash("Message updated successfully!", "success")
+    return redirect(url_for('main.personal_chat', room_id=message.room_id))
 
 
 
+@main.route('/delete_message_grup/<int:message_id>', methods=['POST'])
+def delete_message_grup(message_id):
+    if 'user_id' not in session:
+        return redirect(url_for('main.login'))
+    
+    user_id = session.get('user_id')
+    message = ChatGrup.query.get_or_404(message_id)
+
+    # Pastikan hanya pemilik pesan yang bisa menghapusnya
+    if message.user_id != user_id:
+        flash("You don't have permission to delete this message.", "danger")
+        return redirect(url_for('main.personal_chat', room_id=message.room_id))
+
+    room_id = message.room_id
+    
+    # Hapus file gambar jika ada
+    if message.image_filename:
+        image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], message.image_filename)
+        try:
+            os.remove(image_path)  # Menghapus file gambar dari server
+            print(f"Image {image_path} deleted successfully.")
+        except Exception as e:
+            print(f"Error deleting image: {e}")
+
+    # Hapus pesan dari database
+    db.session.delete(message)
+    db.session.commit()
+
+    # Emit event untuk menghapus pesan pada UI pengguna lain tanpa 'broadcast'
+    socketio.emit('delete_message', {
+        'message_id': message_id
+    }, room=room_id)
+
+    flash("Message deleted successfully!", "success")
+    return redirect(url_for('main.personal_chat', room_id=room_id))
 @main.route('/delete_message/<int:message_id>', methods=['POST'])
 def delete_message(message_id):
     if 'user_id' not in session:

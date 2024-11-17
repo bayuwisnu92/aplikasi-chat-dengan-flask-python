@@ -125,19 +125,118 @@
     
 <ul>
     {% for room in public_rooms %}
-        <li>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <a href="{{ url_for('main.grup_chat', room_id=room.id) }}" class="mb-3">{{ room.room_name }}</a>
-                
-                <!-- Form untuk Join Grup -->
-                <form action="{{ url_for('main.join_group', room_id=room.id) }}" method="post" style="display: inline;">
-                    <button type="submit" class="btn btn-primary btn-sm">Join</button>
+    <li class="list-group-item">
+        <div class="row align-items-center">
+            <!-- Nama Grup -->
+            <div class="col-8 col-md-10">
+                <a href="{{ url_for('main.grup_chat', room_id=room.id) }}" class="text-decoration-none text-dark fw-bold">
+                    {{ room.room_name }}
+                </a>
+            </div>
+            <!-- Tombol Join -->
+            <div class="col-4 col-md-2 text-end">
+                <form action="{{ url_for('main.join_group', room_id=room.id) }}" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-success btn-sm w-100">Join</button>
                 </form>
             </div>
-        </li>
+        </div>
+    </li>
     {% endfor %}
+    
+    
+    <!-- Modal membuat grup-->
+    <div class="modal fade" id="createChatroomModal" tabindex="-1" aria-labelledby="createChatroomModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createChatroomModalLabel">Buat Chat Grup</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <!-- Modal Body -->
+                <div class="modal-body">
+                    <form method="POST" action="{{ url_for('main.create_chatroom') }}">
+                        <label for="room_name">Nama Chat Grup:</label>
+                        <input type="text" name="room_name" id="room_name" required class="form-control">
+                        <button type="submit" class="btn btn-success mt-3 w-100">Buat Grup</button>
+                    </form>
+                </div>
+                <!-- Modal Footer -->
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Daftar Pengguna -->
+<div class="modal fade" id="userListModal" tabindex="-1" aria-labelledby="userListModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Header Modal -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="userListModalLabel">Daftar Pengguna</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <!-- Body Modal -->
+            <div class="modal-body">
+                <ul class="list-group">
+                    {% for userkan in users_bukan %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ userkan.username }}
+                        <form action="{{ url_for('friend.send_request', receiver_id=userkan.id) }}" method="POST" class="mb-0">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Tambah Teman</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Permintaan Pertemanan -->
+<div class="modal fade" id="friendRequestModal" tabindex="-1" aria-labelledby="friendRequestModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Header Modal -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="friendRequestModalLabel">Permintaan Pertemanan Masuk</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <!-- Body Modal -->
+            <div class="modal-body">
+                {% if current_user.received_requests %}
+                <ul class="list-group">
+                    {% for request in current_user.received_requests %}
+                    {% if request.status == 'pending' %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ request.sender.username }}
+                        <div>
+                            <form action="{{ url_for('friend.accept_request', request_id=request.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-success">Terima</button>
+                            </form>
+                            <form action="{{ url_for('friend.reject_request', request_id=request.id) }}" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger">Tolak</button>
+                            </form>
+                        </div>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted">Tidak ada permintaan pertemanan masuk.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+    
 </ul>
-    <a href="{{ url_for('main.create_chatroom') }}" class="btn btn-primary">Create grup chat</a>
+    
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>

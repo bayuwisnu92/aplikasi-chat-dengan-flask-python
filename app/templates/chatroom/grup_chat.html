@@ -293,7 +293,7 @@
         if (messageElement) {
             const newContent = prompt("Edit your message:", messageElement.querySelector('.message-text').innerText);
             if (newContent) {
-                fetch(`/edit_message/${messageId}`, {
+                fetch(`/edit_message_grup/${messageId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded'
@@ -311,7 +311,7 @@
     // Menangani delete pesan
     function deleteMessage(messageId) {
         if (confirm("Are you sure you want to delete this message?")) {
-            fetch(`/delete_message/${messageId}`, {
+            fetch(`/delete_message_grup/${messageId}`, {
                 method: 'POST'
             }).then(response => {
                 if (response.ok) {

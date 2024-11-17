@@ -21,7 +21,20 @@ def user_list():
         return redirect(url_for('auth.login'))
     username = current_user.username
 
-    users = User.query.filter(User.id != current_user.id).all()
+    # Filter pengguna yang tidak sama dengan pengguna saat ini dan tidak berteman
+    users = User.query.filter(
+    User.id != current_user.id
+    ).filter(
+        ~User.id.in_(
+            db.session.query(FriendRequest.receiver_id)
+            .filter(FriendRequest.sender_id == current_user.id, FriendRequest.status == 'accepted')
+        )
+    ).filter(
+        ~User.id.in_(
+            db.session.query(FriendRequest.sender_id)
+            .filter(FriendRequest.receiver_id == current_user.id, FriendRequest.status == 'accepted')
+        )
+    ).all()
     
     return render_template('user_list.html', users=users, current_user=current_user, username=username)
 
@@ -41,7 +54,7 @@ def send_request(receiver_id):
     else:
         flash("Permintaan pertemanan sudah dikirim sebelumnya!", "info")
 
-    return redirect(url_for('friend.user_list'))
+    return redirect(url_for('main.chatrooms'))
 
 # Terima Permintaan Pertemanan
 @friend_bp.route('/accept_request/<int:request_id>', methods=['POST'])
@@ -52,7 +65,7 @@ def accept_request(request_id):
         friend_request.status = 'accepted'
         db.session.commit()
         flash("Permintaan pertemanan diterima!", "success")
-    return redirect(url_for('friend.user_list'))
+    return redirect(url_for('main.chatrooms'))
 
 # Tolak Permintaan Pertemanan
 @friend_bp.route('/reject_request/<int:request_id>', methods=['POST'])
@@ -63,4 +76,4 @@ def reject_request(request_id):
         friend_request.status = 'rejected'
         db.session.commit()
         flash("Permintaan pertemanan ditolak!", "info")
-    return redirect(url_for('friend.user_list'))
+    return redirect(url_for('main.chatrooms'))
