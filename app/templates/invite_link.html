@@ -1,8 +1,84 @@
 {% extends "index.html" %}
 {% block title %}{{ title }}{% endblock %}
 {% block content %}
-<h2>Share this link to invite others to your group:</h2>
-    <input type="text" value="{{ invite_link }}" readonly onclick="this.select()">
-    <p>Copy the link above to invite users.</p>
-    <a href="{{ url_for('main.chatrooms') }}">Go back to Home</a>
+<div class="invite-container">
+    <h2 class="invite-header">Share this link to invite others to your group:</h2>
+    <div class="invite-input-wrapper">
+        <input type="text" class="invite-input" value="{{ invite_link }}" readonly onclick="this.select()">
+        <button class="copy-button" onclick="copyToClipboard()">Copy</button>
+    </div>
+    <p class="invite-info">Click "Copy" or manually select the link to invite users.</p>
+    <a href="{{ url_for('main.chatrooms') }}" class="back-link">Go back to Home</a>
+</div>
+
+<script>
+    function copyToClipboard() {
+        const input = document.querySelector('.invite-input');
+        input.select();
+        document.execCommand('copy');
+        alert('Invite link copied to clipboard!');
+    }
+</script>
+
+<style>
+    .invite-container {
+        max-width: 500px;
+        margin: 50px auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    .invite-header {
+        font-size: 1.5rem;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    .invite-input-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+    }
+    .invite-input {
+        flex: 1;
+        padding: 10px;
+        font-size: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 4px 0 0 4px;
+        outline: none;
+    }
+    .copy-button {
+        padding: 10px 15px;
+        font-size: 1rem;
+        border: 1px solid #007bff;
+        border-radius: 0 4px 4px 0;
+        background-color: #007bff;
+        color: #fff;
+        cursor: pointer;
+    }
+    .copy-button:hover {
+        background-color: #0056b3;
+    }
+    .invite-info {
+        margin: 10px 0;
+        font-size: 0.9rem;
+        color: #555;
+    }
+    .back-link {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        color: #fff;
+        background-color: #28a745;
+        text-decoration: none;
+        border-radius: 4px;
+    }
+    .back-link:hover {
+        background-color: #218838;
+    }
+</style>
 {% endblock %}

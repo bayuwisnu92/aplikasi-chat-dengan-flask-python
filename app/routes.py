@@ -312,48 +312,85 @@ def grup_chat(room_id):
 @socketio.on('send_message')
 def handle_send_message(data):
     user_id = session.get('user_id')
+    if not user_id:
+        print("User tidak login.")
+        return
+
     room_id = data.get('room_id')
     message_content = data.get('message', '').strip()
     image_filename = None
-    is_group_chat = data.get('is_group_chat', False)  # Identifikasi apakah pesan grup atau personal
+    is_group_chat = data.get('is_group_chat', False)
 
-    # Cek jika pesan kosong
+    print(f"Data diterima: {data}")
+    print(f"user_id: {user_id}, room_id: {room_id}, is_group_chat: {is_group_chat}")
+
+    # Cek apakah pesan kosong
     if not message_content and not data.get('image'):
         print("Pesan kosong, tidak dikirim.")
-        return  # Hentikan proses jika pesan kosong
+        return
 
-    # Simpan gambar jika dikirim dalam format base64
+    # Simpan gambar jika ada
     if data.get('image'):
         import base64
         from io import BytesIO
         from PIL import Image
         import time
         import os
-
-        image_data = data['image'].split(',')[1]  # Hilangkan bagian 'data:image/...;base64,'
-        image = Image.open(BytesIO(base64.b64decode(image_data)))
-        image_filename = secure_filename(f"{user_id}_{int(time.time())}.png")
-        image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
-
         try:
+            image_data = data['image'].split(',')[1]  # Hilangkan prefix base64
+            image = Image.open(BytesIO(base64.b64decode(image_data)))
+            image_filename = secure_filename(f"{user_id}_{int(time.time())}.png")
+            image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
             image.save(image_path)
-            print(f"Image saved to {image_path}")
+            print(f"Gambar berhasil disimpan di {image_path}")
         except Exception as e:
-            print(f"Error saving image: {e}")
+            print(f"Error saat menyimpan gambar: {e}")
+            return
 
-    # Tentukan tabel yang digunakan berdasarkan jenis pesan
+    # Validasi chat room
     if is_group_chat:
-        # Simpan pesan grup
-        new_message = ChatGrup(user_id=user_id, room_id=room_id, message=message_content, image_filename=image_filename)
+        chat_room = ChatRoomGrup.query.get(room_id)
+        if not chat_room:
+            print(f"Chat room grup dengan ID {room_id} tidak ditemukan.")
+            return
+
+        is_member = ChatGroupMember.query.filter_by(room_id=room_id, user_id=user_id).first()
+        if not is_member:
+            print(f"User {user_id} bukan anggota grup {room_id}.")
+            return
+
+        new_message = ChatGrup(
+            user_id=user_id,
+            room_id=room_id,
+            message=message_content,
+            image_filename=image_filename,
+            timestamp=datetime.datetime.utcnow()
+        )
     else:
-        # Simpan pesan personal
-        new_message = Chat(user_id=user_id, room_id=room_id, message=message_content, image_filename=image_filename)
+        chat_room = ChatRoom.query.get(room_id)
+        if not chat_room:
+            print(f"Chat room personal dengan ID {room_id} tidak ditemukan.")
+            return
 
-    # Simpan ke database
-    db.session.add(new_message)
-    db.session.commit()
+        new_message = Chat(
+            user_id=user_id,
+            room_id=room_id,
+            message=message_content,
+            image_filename=image_filename,
+            timestamp=datetime.datetime.utcnow()
+        )
 
-    # Emit pesan ke klien di room untuk menampilkan pesan baru
+    # Simpan pesan ke database
+    try:
+        db.session.add(new_message)
+        db.session.commit()
+        print("Pesan berhasil disimpan ke database.")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error saat menyimpan pesan: {e}")
+        return
+
+    # Emit pesan ke semua klien di room
     emit('receive_message', {
         'message_id': new_message.id,
         'user_id': user_id,
@@ -363,7 +400,7 @@ def handle_send_message(data):
         'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
     }, room=room_id)
 
-    # Emit event `update_last_messages` ke semua klien untuk memperbarui pesan terakhir
+    # Emit event `update_last_messages` untuk memperbarui daftar pesan terakhir
     emit('update_last_messages', {
         'user_id': user_id,
         'message': message_content,

@@ -4,12 +4,45 @@
 
 {% block content %}
 <div class="container chat-container">
-    <h2 class="chat-header"><h2>Grup: {{ chatroom.room_name }}
+    <h2 class="chat-header">
+        Grup: {{ chatroom.room_name }}
         {% if is_admin %}
-        <a href="{{ url_for('main.generate_invite_link', room_id=chatroom.id) }}">Generate Invite Link</a>
+        <a href="{{ url_for('main.generate_invite_link', room_id=chatroom.id) }}" class="generate-invite-link">
+            Generate Invite Link
+        </a>
         {% endif %}
-
     </h2>
+    
+    <style>
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 10px 20px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+    
+        .chat-header .generate-invite-link {
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            text-decoration: none;
+            color: #fff;
+            background-color: #007bff;
+            border-radius: 5px;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+    
+        .chat-header .generate-invite-link:hover {
+            background-color: #0056b3;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+    
     
     
 

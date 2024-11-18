@@ -123,26 +123,10 @@
     </ul>
     
 <ul>
-    {% for room in public_rooms %}
-    <li class="list-group-item">
-        <div class="row align-items-center">
-            <!-- Nama Grup -->
-            <div class="col-8 col-md-10">
-                <a href="{{ url_for('main.grup_chat', room_id=room.id) }}" class="text-decoration-none text-dark fw-bold">
-                    {{ room.room_name }}
-                </a>
-            </div>
-            <!-- Tombol Join -->
-            <div class="col-4 col-md-2 text-end">
-                <form action="{{ url_for('main.join_group_satu', room_id=room.id) }}" method="post" class="d-inline">
-                    <button type="submit" class="btn btn-success btn-sm w-100">Join</button>
-                </form>
-            </div>
-        </div>
-    </li>
-    {% endfor %}
+    <!--  -->
     
     
+
     <!-- Modal membuat grup-->
     <div class="modal fade" id="createChatroomModal" tabindex="-1" aria-labelledby="createChatroomModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -233,6 +217,8 @@
 </ul>
     
 </div>
+
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
 <script>

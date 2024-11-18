@@ -12,20 +12,7 @@ class User(db.Model):
 
     # Relasi ke permintaan pertemanan
     # Relasi ke permintaan pertemanan yang dikirim
-    sent_requests = db.relationship(
-        'FriendRequest', 
-        foreign_keys='FriendRequest.sender_id', 
-        backref='request_sender', 
-        lazy=True
-    )
-    
-    # Relasi ke permintaan pertemanan yang diterima
-    received_requests = db.relationship(
-        'FriendRequest', 
-        foreign_keys='FriendRequest.receiver_id', 
-        backref='request_receiver', 
-        lazy=True
-    )
-
+    sent_requests = db.relationship('FriendRequest', foreign_keys='FriendRequest.sender_id', back_populates='sender')
+    received_requests = db.relationship('FriendRequest', foreign_keys='FriendRequest.receiver_id', back_populates='receiver')
     def __repr__(self):
         return f"<User {self.username}>"
