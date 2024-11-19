@@ -4,50 +4,49 @@
 
 {% block content %}
 <style>
-    .chat-container { /* Menggunakan class khusus */
+    .chat-container {
         font-family: Arial, sans-serif;
-        max-width: 600px; /* Membatasi lebar kontainer */
-        margin: 0 auto; /* Memusatkan kontainer */
-        padding: 20px; /* Menambah padding di dalam kontainer */
-        border-radius: 8px; /* Membuat sudut kontainer lebih halus */
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Efek bayangan */
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
     .chat-container h2 {
-        font-size: 2em; /* Ukuran font lebih besar */
-        color: #075e54; /* Warna teks */
-        margin-bottom: 20px; /* Jarak bawah */
-        text-align: center; /* Memusatkan teks */
+        font-size: 2em;
+        color: #075e54;
+        margin-bottom: 20px;
+        text-align: center;
     }
     .chat-container ul {
-        list-style-type: none; /* Menghilangkan bullet point */
-        padding: 0; /* Menghilangkan padding */
+        list-style-type: none;
+        padding: 0;
     }
     .chat-container ul li {
-        margin-bottom: 10px; /* Jarak antar list item */
+        margin-bottom: 10px;
     }
     .chat-container ul li a {
-        display: block; /* Mengatur tampilan sebagai blok */
-        padding: 12px 20px; /* Menambah padding dalam link */
-        color: #075e54; /* Warna teks link */
-        text-decoration: none; /* Menghilangkan garis bawah */
-        background-color: #e5ddd5; /* Warna latar belakang link */
-        border-radius: 8px; /* Sudut halus */
-        transition: background-color 0.3s ease; /* Efek transisi */
-        font-weight: bold; /* Menebalkan teks */
+        display: block;
+        padding: 12px 20px;
+        color: #075e54;
+        text-decoration: none;
+        background-color: #e5ddd5;
+        border-radius: 8px;
+        transition: background-color 0.3s ease;
+        font-weight: bold;
     }
     .chat-container ul li a:hover {
-        background-color: #c8e0d4; /* Warna latar belakang saat hover */
-        transform: translateY(-2px); /* Efek angkat sedikit saat hover */
+        background-color: #c8e0d4;
+        transform: translateY(-2px);
     }
     .chat-link {
-        display: flex; /* Menggunakan flexbox untuk tata letak yang lebih baik */
-        align-items: center; /* Menengahkan item dalam flexbox */
+        display: flex;
+        align-items: center;
     }
 </style>
 
-
-
 <div class="chat-container">
+    <input type="text" id="sistem-cari" placeholder="Cari user/email/grup/pesan..." class="form-control mb-3" />
     <div class="d-flex align-items-center mb-3 bg-dark">
         <a href="{{ url_for('main.profile', username=profile.username) }}" class="text-decoration-none d-flex align-items-center">
             {% if profile.gambar_filename %}
@@ -62,220 +61,173 @@
             <h2 style="margin: 0; font-size: 1.5rem;" class="text-white">{{ username }}</h2>
         </a>
     </div>
-    
-    
-    
-    <ul>
-      {% for user in users|sort(attribute='last_message_timestamp', reverse=true) %}
-      <li>
-        <a href="{{ url_for('main.create_private_chat', username=user.username) }}" class="chat-link">
-            {% if user.gambar_filename %}
-    <img src="{{ url_for('static', filename='uploads/' ~ user.gambar_filename) }}" alt="Profile Picture" class="profile-img rounded-circle" style="width: 40px; height: auto;">
-{% else %}
-    <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" alt="Default Profile Picture" class="profile-img rounded-circle" style="width: 40px; height: auto;">
-{% endif %}
 
-         {{ user.username }} <br>
-         {% if user.id in last_messages %}
-    <span class="last-message" data-user-id="{{ user.id }}" style="color:black;margin-left: 50px;">
-        {{ last_messages[user.id].message | safe | truncate(52) }}
-    </span>
-{% else %}
-    <span class="last-message" data-user-id="{{ user.id }}" style="margin-left: 50px;color: grey;">
-        Tidak ada pesan terakhir
-    </span>
-{% endif %}
-
-     
-        </a>
-        
-      </li>
-      {% endfor %}
-      <li>
-        
-<ul>
-    {% for grup in grup_chatroom %}
-        <a href="{{ url_for('main.grup_chat', room_id=grup.id) }}" class="chat-link mb-3">
-          <ul>
-          
-            <li>
-                <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" 
-                     alt="Default Profile Picture" 
-                     class="profile-img rounded-circle" 
-                     style="width: 40px; height: auto;">
-                <strong>Grup:</strong> {{ grup.room_name }}<br>
-                <span class="last-message" 
-                      data-user-id="{{ grup.id }}" 
-                      style="color:black; margin-left: 50px;">
-                      {% if last_messages_grup[grup.id] %}
-                          {{ last_messages_grup[grup.id].message | safe | truncate(52) }}
-                      {% else %}
-                          <span style="color: grey;">tidak ada pesan terakhir</span>
-                      {% endif %}
-                </span>
-            </li>
-          </ul>
-        </a>
-        {% endfor %}
-</ul>
-
-      </li>
-    </ul>
-    
-<ul>
-    <!--  -->
-    
-    
-
-    <!-- Modal membuat grup-->
-    <div class="modal fade" id="createChatroomModal" tabindex="-1" aria-labelledby="createChatroomModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <!-- Modal Header -->
-                <div class="modal-header">
-                    <h5 class="modal-title" id="createChatroomModalLabel">Buat Chat Grup</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <!-- Modal Body -->
-                <div class="modal-body">
-                    <form method="POST" action="{{ url_for('main.create_chatroom') }}">
-                        <label for="room_name">Nama Chat Grup:</label>
-                        <input type="text" name="room_name" id="room_name" required class="form-control">
-                        <button type="submit" class="btn btn-success mt-3 w-100">Buat Grup</button>
-                    </form>
-                </div>
-                <!-- Modal Footer -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Daftar Pengguna -->
-    <div class="modal fade" id="userListModal" tabindex="-1" aria-labelledby="userListModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="userListModalLabel">Cari Pengguna</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Input Pencarian -->
-                    <input type="text" id="searchUserInput" class="form-control mb-3" placeholder="Cari berdasarkan username atau email">
-    
-                    <!-- Daftar Pengguna -->
-                    <ul class="list-group" id="userList">
-                        <!-- Hasil pencarian akan ditampilkan di sini -->
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-
-<!-- Modal Permintaan Pertemanan -->
-<div class="modal fade" id="friendRequestModal" tabindex="-1" aria-labelledby="friendRequestModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <!-- Header Modal -->
-            <div class="modal-header">
-                <h5 class="modal-title" id="friendRequestModalLabel">Permintaan Pertemanan Masuk</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <!-- Body Modal -->
-            <div class="modal-body">
-                {% if current_user.received_requests %}
-                <ul class="list-group">
-                    {% for request in current_user.received_requests %}
-                    {% if request.status == 'pending' %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ request.sender.username }}
-                        <div>
-                            <form action="{{ url_for('friend.accept_request', request_id=request.id) }}" method="POST" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-success">Terima</button>
-                            </form>
-                            <form action="{{ url_for('friend.reject_request', request_id=request.id) }}" method="POST" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-danger">Tolak</button>
-                            </form>
-                        </div>
-                    </li>
-                    {% endif %}
-                    {% endfor %}
-                </ul>
+    <ul id="message-list">
+        {% for user in users|sort(attribute='last_message_timestamp', reverse=true) %}
+        <li>
+            <a href="{{ url_for('main.create_private_chat', username=user.username) }}" class="chat-link">
+                {% if user.gambar_filename %}
+                    <img src="{{ url_for('static', filename='uploads/' ~ user.gambar_filename) }}" alt="Profile Picture" class="profile-img rounded-circle" style="width: 40px; height: auto;">
                 {% else %}
-                <p class="text-muted">Tidak ada permintaan pertemanan masuk.</p>
+                    <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" alt="Default Profile Picture" class="profile-img rounded-circle" style="width: 40px; height: auto;">
                 {% endif %}
+                {{ user.username }} <br>
+                {% if user.id in last_messages %}
+                    <span class="last-message" data-user-id="{{ user.id }}" style="color:black;margin-left: 50px;">
+                        {{ last_messages[user.id].message | safe | truncate(52) }}
+                    </span>
+                {% else %}
+                    <span class="last-message" data-user-id="{{ user.id }}" style="margin-left: 50px;color: grey;">
+                        Tidak ada pesan terakhir
+                    </span>
+                {% endif %}
+            </a>
+        </li>
+        {% endfor %}
+        <li>
+            <ul>
+                {% for grup in grup_chatroom %}
+                <a href="{{ url_for('main.grup_chat', room_id=grup.id) }}" class="chat-link mb-3">
+                    <ul>
+                        <li>
+                            <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" 
+                                 alt="Default Profile Picture" 
+                                 class="profile-img rounded-circle" 
+                                 style="width: 40px; height: auto;">
+                            <strong>Grup:</strong> {{ grup.room_name }}<br>
+                            <span class="last-message" 
+                                  data-user-id="{{ grup.id }}" 
+                                  style="color:black; margin-left: 50px;">
+                                {% if last_messages_grup[grup.id] %}
+                                    {{ last_messages_grup[grup.id].message | safe | truncate(52) }}
+                                {% else %}
+                                    <span style="color: grey;">tidak ada pesan terakhir</span>
+                                {% endif %}
+                            </span>
+                        </li>
+                    </ul>
+                </a>
+                {% endfor %}
+            </ul>
+        </li>
+    </ul>
+
+    <ul>
+        <!-- Modal membuat grup-->
+        <div class="modal fade" id="createChatroomModal" tabindex="-1" aria-labelledby="createChatroomModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createChatroomModalLabel">Buat Chat Grup</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="POST" action="{{ url_for('main.create_chatroom') }}">
+                            <label for="room_name">Nama Chat Grup:</label>
+                            <input type="text" name="room_name" id="room_name" required class="form-control">
+                            <button type="submit" class="btn btn-success mt-3 w-100">Buat Grup</button>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+
+        <!-- Modal Daftar Pengguna -->
+        <div class="modal fade" id="userListModal" tabindex="-1" aria-labelledby="userListModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="userListModalLabel">Cari Pengguna</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="text" id="searchUserInput" class="form-control mb-3" placeholder="Cari berdasarkan username atau email">
+                        <input type="text" id="searchGroupInput" class="form-control mb-3" placeholder="Cari berdasarkan nama grup">
+                        <ul class="list-group" id="userList">
+                            <!-- Hasil pencarian akan ditampilkan di sini -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Permintaan Pertemanan -->
+        <div class="modal fade" id="friendRequestModal" tabindex="-1" aria-labelledby="friendRequestModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="friendRequestModalLabel">Permintaan Pertemanan Masuk</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% if current_user.received_requests %}
+                        <ul class="list-group">
+                            {% for request in current_user.received_requests %}
+                            {% if request.status == 'pending' %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {{ request.sender.username }}
+                                <div>
+                                    <form action="{{ url_for('friend.accept_request', request_id=request.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success">Terima</button>
+                                    </form>
+                                    <form action="{{ url_for('friend.reject_request', request_id=request.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-danger">Tolak</button>
+                                    </form>
+                                </div>
+                            </li>
+                            {% endif %}
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted">Tidak ada permintaan pertemanan masuk.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ul>
 </div>
-
-
-
-    
-</ul>
-    
-</div>
-
-
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
 <script>
     const socket = io();
-
-    // Menghubungkan ke chatroom
-    const roomId = "{{ room_id }}"; // Pastikan variabel ini benar sesuai kebutuhan
+    const roomId = "{{ room_id }}"; 
     socket.emit('join', { room_id: roomId });
 
-    // Mendengarkan pesan baru dan menambahkannya ke UI
     socket.on('receive_message', function(data) {
         const messageElement = document.createElement('div');
         messageElement.innerHTML = `<strong>${data.username}:</strong> ${data.message} <em>${data.timestamp}</em>`;
         document.getElementById('messages').appendChild(messageElement);
     });
 
-    // Mendengarkan pembaruan pesan terakhir
     socket.on('update_last_messages', function(data) {
-    console.log("Updating last message:", data); // Debugging log
+        console.log("Updating last message:", data);
+        const lastMessageElement = document.querySelector(`.last-message[data-user-id="${data.user_id}"]`);
+        if (lastMessageElement) {
+            const listItemElement = lastMessageElement.closest('li');
+            lastMessageElement.innerHTML = `<span style='color:red;'><strong>pesan baru:</strong> ${data.message} <em>${data.timestamp}</em></span>`;
+            listItemElement.style.backgroundColor = 'red';
+            const chatList = listItemElement.parentNode;
+            chatList.prepend(listItemElement);
+        } else {
+            console.log("Element for user_id not found:", data.user_id);
+        }
+    });
 
-    // Temukan elemen pesan terakhir berdasarkan user_id
-    const lastMessageElement = document.querySelector(`.last-message[data-user-id="${data.user_id}"]`);
-    if (lastMessageElement) {
-        const listItemElement = lastMessageElement.closest('li'); // Temukan elemen list item terkait
-        
-        // Perbarui konten pesan terakhir
-        lastMessageElement.innerHTML = `<span style='color:red;'><strong>pesan baru:</strong> ${data.message} <em>${data.timestamp}</em></span>`;
-        
-        // Ubah latar belakang list item menjadi merah
-        listItemElement.style.backgroundColor = 'red';
-
-        // Pindahkan list item ke bagian atas daftar
-        const chatList = listItemElement.parentNode;
-        chatList.prepend(listItemElement); // Memindahkan elemen ke posisi pertama dalam daftar
-    } else {
-        console.log("Element for user_id not found:", data.user_id);  // Log jika elemen tidak ditemukan
-    }
-});
-
-// untuk pencarian
-document.getElementById('searchUserInput').addEventListener('input', function() {
+    document.getElementById('searchUserInput').addEventListener('input', function() {
         const query = this.value;
-
-        // Jika input kosong, kosongkan hasil
         if (query.trim() === '') {
             document.getElementById('userList').innerHTML = '';
             return;
         }
-
-        // Kirim permintaan ke server
         fetch(`/search_user?query=${encodeURIComponent(query)}`)
             .then(response => response.json())
             .then(data => {
                 const userList = document.getElementById('userList');
-                userList.innerHTML = ''; // Kosongkan daftar sebelumnya
-
-                // Tampilkan hasil pencarian
+                userList.innerHTML = '';
                 data.forEach(user => {
                     const listItem = document.createElement('li');
                     listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
@@ -290,6 +242,34 @@ document.getElementById('searchUserInput').addEventListener('input', function() 
             })
             .catch(error => console.error('Error:', error));
     });
+
+    document.getElementById('searchGroupInput').addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        const groupItems = document.querySelectorAll('.chat-container ul li a');
+        groupItems.forEach(item => {
+            const groupName = item.querySelector('strong').nextSibling.textContent.toLowerCase();
+            if (groupName.includes(query)) {
+                item.parentElement.style.display = '';
+            } else {
+                item.parentElement.style.display = 'none';
+            }
+        });
+    });
+
+    document.getElementById('sistem-cari').addEventListener('input', function() {
+    const query = this.value.toLowerCase(); // Ambil teks pencarian dan ubah ke huruf kecil
+    const messages = document.querySelectorAll('#message-list li'); // Ambil semua item dalam daftar
+
+    messages.forEach(function(message) {
+        // Cocokkan teks pencarian dengan isi teks elemen
+        if (message.textContent.toLowerCase().includes(query)) {
+            message.style.display = ''; // Tampilkan elemen jika cocok
+        } else {
+            message.style.display = 'none'; // Sembunyikan elemen jika tidak cocok
+        }
+    });
+});
+
 </script>
 
 {% endblock %}
