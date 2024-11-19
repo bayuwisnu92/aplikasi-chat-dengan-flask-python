@@ -23,8 +23,12 @@
                     {% if message.image_filename %}
                         <img src="{{ url_for('static', filename='uploads/' + message.image_filename) }}" alt="Sent image" class="message-image" style="max-width: 100%; height: auto;">
                     {% endif %}
-                    <strong>{{ message.user.username }}</strong>:
+                    <a href="{{ url_for('main.profile', username=message.user.username) }}" style="text-decoration: none; color:black">{% if message.user.gambar_filename %}
+                        <img src="{{ url_for('static', filename='uploads/' + message.user.gambar_filename) }}" alt="Sent image" class="message-image" style="width: 30px; height: auto;">
+                    {% endif %}
+                    <strong>{{ message.user.username }}</strong></a>:
                     <span class="message-text">{{ message.message | safe }}</span>
+                    <button class="btn badge btn-sm text-info" onclick="copyMessage('{{ message.message | e }}')"><i class="bi bi-clipboard"></i></button>
                 </div>
                 <small class="message-timestamp">{{ message.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
                 {% if message.user_id == session['user_id'] %}
@@ -254,8 +258,8 @@
             `;
 
             // Cek apakah data berisi `image_filename` dan tambahkan gambar jika ada
-            if (data.image_filename) {
-                messageContent += `<img src="/static/uploads/${data.image_filename}" alt="Sent image" class="message-image" style="max-width: 100%; height: auto;">`;
+            if (data.image) {
+                messageContent += `<img src="/static/uploads/${data.image}" alt="Sent image" class="message-image" style="max-width: 100%; height: auto;">`;
             }
 
             // Tambahkan tombol edit dan delete jika pengguna adalah pengirim pesan
@@ -325,6 +329,15 @@
                 }
             });
         }
+    }
+
+    // Menangani salin pesan
+    function copyMessage(message) {
+        navigator.clipboard.writeText(message).then(() => {
+            alert("Pesan disalin ke clipboard!");
+        }).catch(err => {
+            console.error("Gagal menyalin pesan: ", err);
+        });
     }
 </script>
 {% endblock %}
