@@ -324,20 +324,21 @@ def handle_send_message(data):
     print(f"Data diterima: {data}")
     print(f"user_id: {user_id}, room_id: {room_id}, is_group_chat: {is_group_chat}")
 
-    # Cek apakah pesan kosong
+    # Validasi apakah pesan atau gambar kosong
     if not message_content and not data.get('image'):
         print("Pesan kosong, tidak dikirim.")
         return
 
     # Simpan gambar jika ada
     if data.get('image'):
-        import base64
-        from io import BytesIO
-        from PIL import Image
-        import time
-        import os
         try:
-            image_data = data['image'].split(',')[1]  # Hilangkan prefix base64
+            # Validasi format gambar
+            if not data['image'].startswith('data:image/'):
+                print("Format gambar tidak valid.")
+                return
+            
+            # Hilangkan prefix base64 dan simpan gambar
+            image_data = data['image'].split(',')[1]
             image = Image.open(BytesIO(base64.b64decode(image_data)))
             image_filename = secure_filename(f"{user_id}_{int(time.time())}.png")
             image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], image_filename)
@@ -347,13 +348,14 @@ def handle_send_message(data):
             print(f"Error saat menyimpan gambar: {e}")
             return
 
-    # Validasi chat room
+    # Validasi dan buat pesan berdasarkan tipe chat
     if is_group_chat:
         chat_room = ChatRoomGrup.query.get(room_id)
         if not chat_room:
             print(f"Chat room grup dengan ID {room_id} tidak ditemukan.")
             return
 
+        # Validasi keanggotaan grup
         is_member = ChatGroupMember.query.filter_by(room_id=room_id, user_id=user_id).first()
         if not is_member:
             print(f"User {user_id} bukan anggota grup {room_id}.")
@@ -390,23 +392,34 @@ def handle_send_message(data):
         print(f"Error saat menyimpan pesan: {e}")
         return
 
-    # Emit pesan ke semua klien di room
-    emit('receive_message', {
+    # Emit pesan ke klien berdasarkan tipe chat
+    emit_data = {
         'message_id': new_message.id,
         'user_id': user_id,
         'username': session.get('username'),
         'message': message_content,
         'image_filename': image_filename,
         'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
-    }, room=room_id)
+    }
 
-    # Emit event `update_last_messages` untuk memperbarui daftar pesan terakhir
-    emit('update_last_messages', {
-        'user_id': user_id,
-        'message': message_content,
-        'username': session.get('username')
-        'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
-    }, broadcast=True)
+    if is_group_chat:
+        emit('receive_message_grup', emit_data, room=room_id)
+        # Emit update pesan terakhir untuk grup
+        emit('update_last_messages_grup', {
+            'room_id': room_id,
+            'message': message_content,
+            'username': session.get('username'),
+            'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        }, broadcast=True)
+    else:
+        emit('receive_message', emit_data, room=room_id)
+        # Emit update pesan terakhir untuk personal
+        emit('update_last_messages', {
+            'user_id': user_id,
+            'message': message_content,
+            'username': session.get('username'),
+            'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
+        }, broadcast=True)
 
 
 

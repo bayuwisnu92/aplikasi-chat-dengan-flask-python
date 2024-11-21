@@ -105,30 +105,29 @@
         </li>
         {% endfor %}
         <li>
-            <ul>
+            <ul id="chat-list">
                 {% for grup in grup_chatroom %}
-                <a href="{{ url_for('main.grup_chat', room_id=grup.id) }}" class="chat-link mb-3">
-                    <ul>
-                        <li>
-                            <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" 
-                                 alt="Default Profile Picture" 
-                                 class="profile-img rounded-circle" 
-                                 style="width: 40px; height: auto;">
-                            <strong>Grup:</strong> {{ grup.room_name }}<br>
-                            <span class="last-message" 
-                                  data-user-id="{{ grup.id }}" 
-                                  style="color:black; margin-left: 50px;">
-                                {% if last_messages_grup[grup.id] %}
-                                    {{ last_messages_grup[grup.id].message | safe | truncate(52) }}
-                                {% else %}
-                                    <span style="color: grey;">tidak ada pesan terakhir</span>
-                                {% endif %}
-                            </span>
-                        </li>
-                    </ul>
-                </a>
+                <li>
+                    <a href="{{ url_for('main.grup_chat', room_id=grup.id) }}" class="chat-link mb-3">
+                        <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" 
+                             alt="Default Profile Picture" 
+                             class="profile-img rounded-circle" 
+                             style="width: 40px; height: auto;">
+                        <strong>Grup:</strong> {{ grup.room_name }}<br>
+                        <span class="last-message_grup" 
+                              data-room-id="{{ grup.id }}" 
+                              style="color:black; margin-left: 50px;">
+                            {% if last_messages_grup[grup.id] %}
+                                {{ last_messages_grup[grup.id].message | safe | truncate(52) }}
+                            {% else %}
+                                <span style="color: grey;">tidak ada pesan terakhir</span>
+                            {% endif %}
+                        </span>
+                    </a>
+                </li>
                 {% endfor %}
             </ul>
+            
         </li>
     </ul>
 
@@ -222,6 +221,11 @@
         messageElement.innerHTML = `<strong>${data.username}:</strong> ${data.message} <em>${data.timestamp}</em>`;
         document.getElementById('messages').appendChild(messageElement);
     });
+    socket.on('receive_message_grup', function(data) {
+    const messageElement = document.createElement('div');
+    messageElement.innerHTML = `<strong>${data.username}:</strong> ${data.message} <em>${data.timestamp}</em>`;
+    document.getElementById('messages').appendChild(messageElement);
+});
 
     socket.on('update_last_messages', function(data) {
         console.log("Updating last message:", data);
@@ -236,6 +240,20 @@
             console.log("Element for user_id not found:", data.user_id);
         }
     });
+    socket.on('update_last_messages_grup', function(data) {
+    console.log("Updating last message_grup:", data);
+    const lastMessageElement = document.querySelector(`.last-message_grup[data-room-id="${data.room_id}"]`);
+    if (lastMessageElement) {
+        const listItemElement = lastMessageElement.closest('li');
+        lastMessageElement.innerHTML = `<span style='color:red;'><strong>pesan baru:</strong> ${data.message} <em>${data.timestamp}</em></span>`;
+        listItemElement.style.backgroundColor = 'red';
+        const chatList = listItemElement.parentNode;
+        chatList.prepend(listItemElement);
+    } else {
+        console.log("Element for room_id not found:", data.room_id);
+    }
+});
+
 
     document.getElementById('searchUserInput').addEventListener('input', function() {
         const query = this.value;

@@ -289,7 +289,7 @@
 
 
         // Mendengarkan event 'receive_message' dari server untuk pesan baru
-        socket.on('receive_message', function (data) {
+        socket.on('receive_message_grup', function (data) {
     const chatBox = document.getElementById('chat-box');
     const newMessage = document.createElement('div');
     newMessage.id = `message-${data.message_id}`;
