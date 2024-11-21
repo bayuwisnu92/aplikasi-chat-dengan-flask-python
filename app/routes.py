@@ -404,6 +404,7 @@ def handle_send_message(data):
     emit('update_last_messages', {
         'user_id': user_id,
         'message': message_content,
+        'username': session.get('username')
         'timestamp': new_message.timestamp.strftime('%Y-%m-%d %H:%M:%S')
     }, broadcast=True)
 

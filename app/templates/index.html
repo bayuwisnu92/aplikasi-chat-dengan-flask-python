@@ -25,7 +25,7 @@
                     
                     {% if session.get('user_id') and session.get('username') %}
                     <li class="nav-item">
-                      <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">daftar chat</a>
+                      <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">Chat</a>
                   </li>
                     <li class="nav-item">
                       <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/profile/{{ username }}">profile</a>

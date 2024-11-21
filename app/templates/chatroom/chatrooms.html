@@ -46,21 +46,41 @@
 </style>
 
 <div class="chat-container">
-    <input type="text" id="sistem-cari" placeholder="Cari user/email/grup/pesan..." class="form-control mb-3" />
-    <div class="d-flex align-items-center mb-3 bg-dark">
-        <a href="{{ url_for('main.profile', username=profile.username) }}" class="text-decoration-none d-flex align-items-center">
-            {% if profile.gambar_filename %}
-                <img src="{{ url_for('static', filename='uploads/' + profile.gambar_filename) }}" 
-                     alt="{{ profile.username }}'s Profile Picture" 
-                     style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 10px;" />
-            {% else %}
-                <img src="{{ url_for('static', filename='uploads/nophoto.jpg') }}" 
-                     alt="Default Profile Picture" 
-                     style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 10px;" />
-            {% endif %}
-            <h2 style="margin: 0; font-size: 1.5rem;" class="text-white">{{ username }}</h2>
+    <div class="d-flex align-items-center justify-content-between p-3 bg-dark rounded shadow-sm mb-2">
+        <!-- Profil User -->
+        <a 
+            href="{{ url_for('main.profile', username=profile.username) }}" 
+            class="d-flex align-items-center text-decoration-none text-white"
+            style="min-width: 200px;"
+        >
+            <img 
+                src="{{ url_for('static', filename='uploads/' + (profile.gambar_filename if profile.gambar_filename else 'nophoto.jpg')) }}" 
+                alt="{{ profile.username }}'s Profile Picture"
+                style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 10px;"
+            />
+            <h2 style="margin: 0; font-size: 1.25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ username }}
+            </h2>
         </a>
+
+        <!-- Input Pencarian -->
+        <div class="flex-grow-1 me-3">
+            <input 
+                type="text" 
+                id="sistem-cari" 
+                placeholder="Cari user/email/grup/pesan..." 
+                class="form-control form-control-lg" 
+                style="
+                border: none; 
+                border-radius: 8px; 
+                background-color: #f5f5f5; 
+                color: #333; 
+                padding: 10px 15px;
+            "
+            />
+        </div>
     </div>
+    
 
     <ul id="message-list">
         {% for user in users|sort(attribute='last_message_timestamp', reverse=true) %}
